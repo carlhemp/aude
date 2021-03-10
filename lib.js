@@ -1,6 +1,66 @@
 function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
 }
+class Gameboard {
+  //array of arrays is a list of rows that represent the board
+  constructor(arrayOfArrays){
+    console.log(arrayOfArrays);
+    let board = [];
+    for(const row of arrayOfArrays){
+      let b_row = [];
+      for(const column of row){
+        //should we check that it's either null or a Tile object?
+        b_row.push(column);
+      }
+      board.push(b_row);
+    }
+    this.board = board;
+  }
+  addTile(tile,row,column){
+    this.board[row][column] = tile;
+    
+    //now make sure there is null tile before/after every actual tile.
+    if(row == (this.board.length - 1)){ //add row after
+      this.addRow();
+    }
+    if(column == (this.board[row].length - 1)){ //add column after
+      this.addColumn();
+    }
+    if(row == 0){ //add a row before
+      this.addRow(true);
+    }
+    if(column == 0){ //add a column before
+      this.addColumn(true);
+    }
+    this.draw();
+  }
+  addRow(beginning=false){
+    let row = [];
+    for(const x of this.board[0]){
+      row.push(null);
+    }
+    if(beginning){
+      this.board.unshift(row);
+    }
+    else{
+      this.board.push(row);
+    }
+  }
+  addColumn(beginning=false){
+    for(const row of this.board){
+      if(beginning){
+        row.unshift(null);  
+      }
+      else{
+        row.push(null);
+      }
+    }
+  }
+  draw(){
+    console.log(this.board);
+  }
+}
+
 
 class Tile {
   constructor(top, right, bottom, left, center, background){
