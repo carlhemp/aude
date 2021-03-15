@@ -1,0 +1,22 @@
+:root {
+  --variables: '';
+}
+
+*{
+	box-sizing: border-box;
+	transition: all .2s;
+}
+
+game-board {
+
+}
+game-board div div {
+	display: inline-block;
+	height: 80px;
+	width: 80px;
+	margin: 0px;
+	border: 1px solid gray;
+}
+game-board div div:hover {
+	background-color: lightgray;
+}
