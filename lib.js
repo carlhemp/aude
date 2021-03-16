@@ -65,7 +65,7 @@ class Gameboard {
 
 
 class Tile {
-  constructor(top, right, bottom, left, center, background) {
+  constructor(top, right, bottom, left, center, background, shield) {
     let backgroundTypes = ['grass', 'city', 'water'];
     let edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
     let centerTypes = ['abbey', 'garden'];
@@ -81,6 +81,9 @@ class Tile {
     this.background = (backgroundTypes.includes(background) ? background : backgroundTypes[getRandomInt(3)]);
     if(this.background == 'grass'){
       this.center = (centerTypes.includes(center) ? center : centerTypes[getRandomInt(11)]); //centerTypes[randomInt > centerTypes.length adds more chances for null center]
+    }
+    if(this.background == 'city'){
+      this.shield = ([0].indexOf(getRandomInt(9)) == 0 ? 1 : 0);
     }
     this.rotated = 0;
     this.meeple = null;
@@ -116,7 +119,7 @@ class Tile {
       for(let i = 1; i <= rotations[rotate]; i++) {
         this.rotateTile(); //rotate as much as needed
       }
-      
+
       return this; //return a success? or failure?
     } else { //we rotate counter-clockwise
       //keep the meeple connected to it's place.
@@ -365,8 +368,28 @@ Game._drawLayer = function(layer) {
           if(bottom == left) { drawTile(this.ctx,bottom,4,180) }
           if(left == top) { drawTile(this.ctx,left,4,270) }
 
-          if(top == bottom && top != left && top != right) { drawTile(this.ctx,top,6,0) }
-          if(left == right && left != top && left != bottom ) { drawTile(this.ctx,left,6,90) }
+          if(top == bottom && top != left && top != right) { 
+            if(tile.center){
+              drawTile(this.ctx,top,4,0);
+              drawTile(this.ctx,top,4,90);
+              drawTile(this.ctx,top,4,180);
+              drawTile(this.ctx,top,4,270);
+            }
+            else{
+              drawTile(this.ctx,top,6,(tile.rotated >= 2 ? -180 : 0)) 
+            }
+          }
+          if(left == right && left != top && left != bottom ) { 
+            if(tile.center){
+              drawTile(this.ctx,left,4,0);
+              drawTile(this.ctx,left,4,90);
+              drawTile(this.ctx,left,4,180);
+              drawTile(this.ctx,left,4,270);
+            }
+            else{
+              drawTile(this.ctx,left,6,(tile.rotated >= 2 ? -270 : -90)) 
+            }
+          }2
         }
 
         //then draw center tiles
@@ -376,6 +399,13 @@ Game._drawLayer = function(layer) {
         if(center){
           drawTile(this.ctx, center, 0, -tile.rotated*90);
         }
+
+        //finally draw the shield tiles
+        if(tile.shield){
+          drawTile(this.ctx, 8, 0, -tile.rotated*90);
+        }
+
+
 
         function drawTile(context, tile, background, rotation){
           if(tile != background || background > 3 || tile == null){
