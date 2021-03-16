@@ -5,6 +5,9 @@ class Gameboard {
   //array of arrays is a list of rows that represent the board
   constructor(arrayOfArrays) {
     console.log(arrayOfArrays);
+    if(arrayOfArrays == null){
+      arrayOfArrays = [[null]];
+    }
     let board = [];
     for(const row of arrayOfArrays) {
       let b_row = [];
@@ -15,6 +18,7 @@ class Gameboard {
       board.push(b_row);
     }
     this.board = board;
+    console.log(board);
   }
   addTile(tile, row, column) {
     this.board[row][column] = tile;
@@ -55,25 +59,26 @@ class Gameboard {
     }
   }
   draw() {
-    console.log(this.board);
+    //console.log(this.board);
   }
 }
 
 
 class Tile {
   constructor(top, right, bottom, left, center, background) {
-    let tileTypes = ['grass', 'city', 'road', 'river', 'water'];
+    let backgroundTypes = ['grass', 'city', 'water'];
+    let edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
     let centerTypes = ['abbey', 'garden'];
 
     function standardizeTile(tile) {
-      return (tileTypes.includes(tile) ? tile : tileTypes[getRandomInt(4)]);
+      return (edgeTypes.includes(tile) ? tile : edgeTypes[getRandomInt(6)]);
     }
 
     this.top = standardizeTile(top);
     this.right = standardizeTile(right);
     this.bottom = standardizeTile(bottom);
     this.left = standardizeTile(left);
-    this.background = standardizeTile(background);
+    this.background = (backgroundTypes.includes(background) ? background : backgroundTypes[getRandomInt(3)]);
     this.center = (centerTypes.includes(center) ? center : centerTypes[getRandomInt(6)]); //centerTypes[randomInt > centerTypes.length adds more chances for null center]
     this.rotated = 0;
     this.meeple = null;
@@ -212,6 +217,8 @@ var Game = {};
 
 Game.run = function(context) {
   this.ctx = context;
+  this.backContext = document.createElement('canvas');
+  this.cache = {};
   this._previousElapsed = 0;
 
   var p = this.load();
@@ -250,55 +257,20 @@ window.onload = function() {
   Game.run(context);
 };
 
-var map = {
-  cols: 12,
-  rows: 12,
-  tsize: 104,
-  layers: [
-    [
-      3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-      3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3,
-      3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3,
-      3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3,
-      3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3,
-      3, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 3,
-      3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 3,
-      3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 3,
-      3, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 3,
-      3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 3,
-      3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 3,
-      3, 3, 3, 1, 1, 2, 3, 3, 3, 3, 3, 3
-    ],
-    [
-      4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4,
-      4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
-      4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
-      4, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 4,
-      4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
-      4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
-      4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
-      4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
-      4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
-      4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
-      4, 4, 4, 0, 5, 4, 4, 4, 4, 4, 4, 4,
-      4, 4, 4, 0, 0, 3, 3, 3, 3, 3, 3, 3
-    ]
-  ],
-  getTile: function(layer, col, row) {
-    return this.layers[layer][row * map.cols + col];
-  }
-};
-
 class Camera {
-  constructor(map, width, height) {
+  constructor() {
     this.x = 0;
     this.y = 0;
-    this.width = width;
-    this.height = height;
     //-------------------------
-    this.maxX = map.cols * map.tsize - width;
-    this.maxY = map.rows * map.tsize - height;
     this.SPEED = 1024; // pixels per second
+  }
+  get width() { return window.innerWidth; }
+  get height() { return window.innerHeight; }
+  get maxX() {
+    return Game.gameboard.board[0].length * Game.tileSize - this.width;
+  }
+  get maxY() {
+    return Game.gameboard.board.length * Game.tileSize - this.height;
   }
 
   move(delta, dirx, diry) {
@@ -318,10 +290,16 @@ Game.load = function() {
 };
 
 Game.init = function() {
-  Keyboard.listenForEvents(
-    [Keyboard.LEFT, Keyboard.RIGHT, Keyboard.UP, Keyboard.DOWN]);
+  Keyboard.listenForEvents([Keyboard.LEFT, Keyboard.RIGHT, Keyboard.UP, Keyboard.DOWN]);
   this.tileAtlas = Loader.getImage('tiles');
-  this.camera = new Camera(map, 512, 512);
+  this.tileSize = 104;
+  this.gameboard = new Gameboard([[null,null],[null,null]]);
+  for(let i=1; i < 20; i++){
+    for(let j=1; j < 20; j++){
+      this.gameboard.addTile(new Tile(), i, j);
+    }
+  }
+  this.camera = new Camera();
 };
 
 Game.update = function(delta) {
@@ -345,38 +323,151 @@ Game.update = function(delta) {
 };
 
 Game._drawLayer = function(layer) {
-  var startCol = Math.floor(this.camera.x / map.tsize);
-  var endCol = startCol + (this.camera.width / map.tsize);
-  var startRow = Math.floor(this.camera.y / map.tsize);
-  var endRow = startRow + (this.camera.height / map.tsize);
-  var offsetX = -this.camera.x + startCol * map.tsize;
-  var offsetY = -this.camera.y + startRow * map.tsize;
+  var startCol = Math.floor(this.camera.x / Game.tileSize);
+  var endCol = Math.min(startCol + (this.camera.width / Game.tileSize) + 1, Game.gameboard.board[0].length -1 );
+  var startRow = Math.floor(this.camera.y / Game.tileSize);
+  var endRow = Math.min(startRow + (this.camera.height / Game.tileSize) + 1,Game.gameboard.board.length - 1);
+  var offsetX = -this.camera.x + startCol * Game.tileSize;
+  var offsetY = -this.camera.y + startRow * Game.tileSize;
 
   for(var c = startCol; c <= endCol; c++) {
     for(var r = startRow; r <= endRow; r++) {
-      var tile = map.getTile(layer, c, r);
-      var x = (c - startCol) * map.tsize + offsetX;
-      var y = (r - startRow) * map.tsize + offsetY;
-      if(tile !== 0) { // 0 => empty tile
+      var tile = this.gameboard.board[r][c];
+      //console.log(tile);
+      var x = (c - startCol) * Game.tileSize + offsetX;
+      var y = (r - startRow) * Game.tileSize + offsetY;
+      if(tile !== null) { // null => empty tile
+        //first draw background
+        let backgroundTypes = ['grass', 'city', 'water'];
+        let background = backgroundTypes.indexOf(tile.background);
+
         this.ctx.drawImage(
           this.tileAtlas, // image
-          (tile - 1) * map.tsize, // source x
-          0, // source y
-          map.tsize, // source width
-          map.tsize, // source height
+          (background + 1) * Game.tileSize, // source x
+          (background + 1) * Game.tileSize, // source y
+          Game.tileSize, // source width
+          Game.tileSize, // source height
           Math.round(x), // target x
           Math.round(y), // target y
-          map.tsize, // target width
-          map.tsize // target height
+          Game.tileSize, // target width
+          Game.tileSize // target height
         );
+
+        //then draw Top tile
+        let edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
+
+        let top = edgeTypes.indexOf(tile.top);
+        drawEdge(this.ctx, top, background, 0);
+        let right = edgeTypes.indexOf(tile.right);
+        drawEdge(this.ctx, right, background, 90);
+        let bottom = edgeTypes.indexOf(tile.bottom);
+        drawEdge(this.ctx, bottom, background, 180);
+        let left = edgeTypes.indexOf(tile.left);
+        drawEdge(this.ctx, left, background, 270);
+
+        function drawEdge(context, tile, background, rotation){
+          if(tile != background){
+            context.drawImage(
+              rotateFlip(Game.backContext, 
+                Game.tileAtlas,
+                (background + 1) * Game.tileSize, // source x
+                (tile + 1) * Game.tileSize, // source y
+                rotation, 0),
+              0,
+              0,
+              Game.tileSize, // source width
+              Game.tileSize, // source height
+              Math.round(x), // target x
+              Math.round(y), // target y
+              Game.tileSize, // target width
+              Game.tileSize // target height
+            );
+          }
+        }
       }
     }
   }
 };
 
 Game.render = function() {
+  this.ctx.canvas.width  = window.innerWidth;
+  this.ctx.canvas.height = window.innerHeight;
   // draw map background layer
   this._drawLayer(0);
   // draw map top layer
   this._drawLayer(1);
 };
+
+function rotateFlip(backCon, image,tileX,tileY,rotate, flip){
+  let tileSize = Game.tileSize;
+  let cache = Game.cache;
+
+  //check if we have a cache of the rotation and flip
+  let cache_item = cache[tileX+""+tileY+""+rotate+""+flip];
+  if(cache_item){
+    return cache_item;
+  }
+
+  let backContext = backCon.getContext('2d');
+
+  backContext.clearRect(0, 0, tileSize, tileSize);
+  backContext.save();
+
+  /*if(flip == 'horizontal' || flip == 'vertical') {
+    backContext.save();
+    var horScale = 0;
+    var verScale = 0;
+    var spriteXDirection = 1;
+    var spriteYDirection = 1;
+
+    if(flip == "horizontal") {
+      horScale = tileSize;
+      spriteXDirection = -1;
+    }
+
+    if(flip == "vertical" ) {
+      verScale = height;
+      spriteYDirection = -1;
+    }
+
+    backContext.translate(horScale, verScale);
+    backContext.scale(spriteXDirection, spriteYDirection);
+  }*/
+
+  if(rotate){
+    let radians = (Math.PI/180)*rotate;
+
+    backContext.translate(tileSize/2,tileSize/2);
+    backContext.rotate(radians);
+    backContext.translate(-tileSize/2,-tileSize/2);
+  }
+
+  //draw the sprite not we always use 0,0 for top/left
+  backContext.drawImage(image,
+                        tileX,
+                        tileY,
+                        tileSize,
+                        tileSize, 0, 0, tileSize, tileSize);
+
+  //flip the back context back to center - or not, I haven't decided how to optimize this yet.
+  backContext.restore();
+  //store rotation and flip in cache
+  cache[tileX+""+tileY+""+rotate+""+flip] = cloneCanvas(backCon);
+  return backCon;
+}
+
+function cloneCanvas(oldCanvas) {
+  //create a new canvas
+  var newCanvas = document.createElement('canvas');
+  var context = newCanvas.getContext('2d');
+
+  //set dimensions
+  newCanvas.width = oldCanvas.width;
+  newCanvas.height = oldCanvas.height;
+
+  //apply the old canvas to the new one
+  context.drawImage(oldCanvas, 0, 0);
+
+  //return the new canvas
+  return newCanvas;
+}
