@@ -79,7 +79,9 @@ class Tile {
     this.bottom = standardizeTile(bottom);
     this.left = standardizeTile(left);
     this.background = (backgroundTypes.includes(background) ? background : backgroundTypes[getRandomInt(3)]);
-    this.center = (centerTypes.includes(center) ? center : centerTypes[getRandomInt(6)]); //centerTypes[randomInt > centerTypes.length adds more chances for null center]
+    if(this.background == 'grass'){
+      this.center = (centerTypes.includes(center) ? center : centerTypes[getRandomInt(11)]); //centerTypes[randomInt > centerTypes.length adds more chances for null center]
+    }
     this.rotated = 0;
     this.meeple = null;
 
@@ -114,7 +116,7 @@ class Tile {
       for(let i = 1; i <= rotations[rotate]; i++) {
         this.rotateTile(); //rotate as much as needed
       }
-      console.log(this.rotated);
+      
       return this; //return a success? or failure?
     } else { //we rotate counter-clockwise
       //keep the meeple connected to it's place.
@@ -341,32 +343,43 @@ Game._drawLayer = function(layer) {
         let backgroundTypes = ['grass', 'city', 'water'];
         let background = backgroundTypes.indexOf(tile.background);
 
-        this.ctx.drawImage(
-          this.tileAtlas, // image
-          (background + 1) * Game.tileSize, // source x
-          (background + 1) * Game.tileSize, // source y
-          Game.tileSize, // source width
-          Game.tileSize, // source height
-          Math.round(x), // target x
-          Math.round(y), // target y
-          Game.tileSize, // target width
-          Game.tileSize // target height
-        );
-
-        //then draw Top tile
+        drawTile(this.ctx,null,background,-tile.rotated*90);
+        
+        //then draw edge tiles
         let edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
 
         let top = edgeTypes.indexOf(tile.top);
-        drawEdge(this.ctx, top, background, 0);
         let right = edgeTypes.indexOf(tile.right);
-        drawEdge(this.ctx, right, background, 90);
         let bottom = edgeTypes.indexOf(tile.bottom);
-        drawEdge(this.ctx, bottom, background, 180);
         let left = edgeTypes.indexOf(tile.left);
-        drawEdge(this.ctx, left, background, 270);
 
-        function drawEdge(context, tile, background, rotation){
-          if(tile != background){
+        drawTile(this.ctx, top, background, 0);
+        drawTile(this.ctx, right, background, 90);
+        drawTile(this.ctx, bottom, background, 180);
+        drawTile(this.ctx, left, background, 270);
+
+        //then draw diagonals and through
+        if(background == edgeTypes.indexOf('grass')){
+          if(top == right) { drawTile(this.ctx,top,4,0) }
+          if(right == bottom) { drawTile(this.ctx,right,4,90) }
+          if(bottom == left) { drawTile(this.ctx,bottom,4,180) }
+          if(left == top) { drawTile(this.ctx,left,4,270) }
+
+          if(top == bottom && top != left && top != right) { drawTile(this.ctx,top,6,0) }
+          if(left == right && left != top && left != bottom ) { drawTile(this.ctx,left,6,90) }
+        }
+
+        //then draw center tiles
+
+        let center = ['abbey','garden'].indexOf(tile.center);
+        (center > -1 ? center += 6 : center = 0)
+        if(center){
+          drawTile(this.ctx, center, 0, -tile.rotated*90);
+        }
+
+        function drawTile(context, tile, background, rotation){
+          if(tile != background || background > 3 || tile == null){
+            if(tile == null){ tile = background }
             context.drawImage(
               rotateFlip(Game.backContext, 
                 Game.tileAtlas,
