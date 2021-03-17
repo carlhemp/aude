@@ -20,7 +20,17 @@
     <header>
     </header>
     <main>
-      <canvas id="demo" width="512" height="512"></canvas>
+      <canvas id="gameboard" width="512" height="512"></canvas>
+      <div style="position: fixed;
+                  bottom: 0;
+                  right: 0;
+                  width: 140px;
+                  height: 140px;
+                  border-start-start-radius: 2rem;
+                  backdrop-filter: blur(15px);
+                  background: rgba(0,0,0,0.4)">
+        <canvas id="tile-preview" width="104" height="104" style="margin: calc((100% - 94px)/2);"></canvas>
+      </div>
     </main>
     <footer>
     </footer>

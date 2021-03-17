@@ -223,6 +223,7 @@ var Game = {};
 Game.run = function(context) {
   this.ctx = context;
   this.backContext = document.createElement('canvas');
+  this.tilePreview = document.getElementById('tile-preview').getContext('2d');
   this.cache = {};
   this._previousElapsed = 0;
 
@@ -258,7 +259,7 @@ Game.render = function() {};
 //
 
 window.onload = function() {
-  var context = document.getElementById('demo').getContext('2d');
+  var context = document.getElementById('gameboard').getContext('2d');
   Game.run(context);
 };
 
@@ -299,12 +300,13 @@ Game.init = function() {
   this.tileAtlas = Loader.getImage('tiles');
   this.tileSize = 104;
   this.gameboard = new Gameboard([[null,null],[null,null]]);
-  for(let i=1; i < 20; i++){
-    for(let j=1; j < 20; j++){
+  for(let i=1; i < 2; i++){
+    for(let j=1; j < 2; j++){
       this.gameboard.addTile(new Tile(), i, j);
     }
   }
   this.camera = new Camera();
+  this.drawTile(new Tile(),0,0,this.tilePreview);
 };
 
 Game.update = function(delta) {
@@ -341,96 +343,99 @@ Game._drawLayer = function(layer) {
       //console.log(tile);
       var x = (c - startCol) * Game.tileSize + offsetX;
       var y = (r - startRow) * Game.tileSize + offsetY;
-      if(tile !== null) { // null => empty tile
-        //first draw background
-        let backgroundTypes = ['grass', 'city', 'water'];
-        let background = backgroundTypes.indexOf(tile.background);
+      this.drawTile(tile, x, y, this.ctx);
+    }
+  }
+}
 
-        drawTile(this.ctx,null,background,-tile.rotated*90);
-        
-        //then draw edge tiles
-        let edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
+Game.drawTile = function(tile, x, y, context) {
+  if(tile == null) { // null => empty tile
+    drawSprite(context,8,1,0);
+  }
+  else {
+    //first draw background
+    let backgroundTypes = ['grass', 'city', 'water'];
+    let background = backgroundTypes.indexOf(tile.background);
 
-        let top = edgeTypes.indexOf(tile.top);
-        let right = edgeTypes.indexOf(tile.right);
-        let bottom = edgeTypes.indexOf(tile.bottom);
-        let left = edgeTypes.indexOf(tile.left);
+    drawSprite(context,null,background,-tile.rotated*90);
+    
+    //then draw edge tiles
+    let edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
 
-        drawTile(this.ctx, top, background, 0);
-        drawTile(this.ctx, right, background, 90);
-        drawTile(this.ctx, bottom, background, 180);
-        drawTile(this.ctx, left, background, 270);
+    let top = edgeTypes.indexOf(tile.top);
+    let right = edgeTypes.indexOf(tile.right);
+    let bottom = edgeTypes.indexOf(tile.bottom);
+    let left = edgeTypes.indexOf(tile.left);
 
-        //then draw diagonals and through
-        if(background == edgeTypes.indexOf('grass')){
-          if(top == right) { drawTile(this.ctx,top,4,0) }
-          if(right == bottom) { drawTile(this.ctx,right,4,90) }
-          if(bottom == left) { drawTile(this.ctx,bottom,4,180) }
-          if(left == top) { drawTile(this.ctx,left,4,270) }
+    drawSprite(context, top, background, 0);
+    drawSprite(context, right, background, 90);
+    drawSprite(context, bottom, background, 180);
+    drawSprite(context, left, background, 270);
 
-          if(top == bottom && top != left && top != right) { 
-            if(tile.center){
-              drawTile(this.ctx,top,4,0);
-              drawTile(this.ctx,top,4,90);
-              drawTile(this.ctx,top,4,180);
-              drawTile(this.ctx,top,4,270);
-            }
-            else{
-              drawTile(this.ctx,top,6,(tile.rotated >= 2 ? -180 : 0)) 
-            }
-          }
-          if(left == right && left != top && left != bottom ) { 
-            if(tile.center){
-              drawTile(this.ctx,left,4,0);
-              drawTile(this.ctx,left,4,90);
-              drawTile(this.ctx,left,4,180);
-              drawTile(this.ctx,left,4,270);
-            }
-            else{
-              drawTile(this.ctx,left,6,(tile.rotated >= 2 ? -270 : -90)) 
-            }
-          }2
+    //then draw diagonals and through
+    if(background == edgeTypes.indexOf('grass')){
+      if(top == right) { drawSprite(context,top,4,0) }
+      if(right == bottom) { drawSprite(context,right,4,90) }
+      if(bottom == left) { drawSprite(context,bottom,4,180) }
+      if(left == top) { drawSprite(context,left,4,270) }
+
+      if(top == bottom && top != left && top != right) { 
+        if(tile.center){
+          drawSprite(context,top,4,0);
+          drawSprite(context,top,4,90);
+          drawSprite(context,top,4,180);
+          drawSprite(context,top,4,270);
         }
-
-        //then draw center tiles
-
-        let center = ['abbey','garden'].indexOf(tile.center);
-        (center > -1 ? center += 6 : center = 0)
-        if(center){
-          drawTile(this.ctx, center, 0, -tile.rotated*90);
+        else{
+          drawSprite(context,top,6,(tile.rotated >= 2 ? -180 : 0)) 
         }
-
-        //finally draw the shield tiles
-        if(tile.shield){
-          drawTile(this.ctx, 8, 0, -tile.rotated*90);
+      }
+      if(left == right && left != top && left != bottom ) { 
+        if(tile.center){
+          drawSprite(context,left,4,0);
+          drawSprite(context,left,4,90);
+          drawSprite(context,left,4,180);
+          drawSprite(context,left,4,270);
         }
-
-
-
-        function drawTile(context, tile, background, rotation){
-          if(tile != background || background > 3 || tile == null){
-            if(tile == null){ tile = background }
-            context.drawImage(
-              rotateFlip(Game.backContext, 
-                Game.tileAtlas,
-                (background + 1) * Game.tileSize, // source x
-                (tile + 1) * Game.tileSize, // source y
-                rotation, 0),
-              0,
-              0,
-              Game.tileSize, // source width
-              Game.tileSize, // source height
-              Math.round(x), // target x
-              Math.round(y), // target y
-              Game.tileSize, // target width
-              Game.tileSize // target height
-            );
-          }
+        else{
+          drawSprite(context,left,6,(tile.rotated >= 2 ? -270 : -90)) 
         }
       }
     }
+
+    //then draw center tiles
+    let center = ['abbey','garden'].indexOf(tile.center);
+    (center > -1 ? center += 6 : center = 0)
+    if(center){
+      drawSprite(context, center, 0, -tile.rotated*90);
+    }
+
+    //finally draw the shield tiles
+    if(tile.shield){
+      drawSprite(context, 8, 0, -tile.rotated*90);
+    }
   }
-};
+  function drawSprite(context, tile, background, rotation){
+    if(tile != background || background > 3 || tile == null){
+      if(tile == null){ tile = background }
+      context.drawImage(
+        rotateFlip(Game.backContext, 
+          Game.tileAtlas,
+          (background + 1) * Game.tileSize, // source x
+          (tile + 1) * Game.tileSize, // source y
+          rotation, 0),
+        0,
+        0,
+        Game.tileSize, // source width
+        Game.tileSize, // source height
+        Math.round(x), // target x
+        Math.round(y), // target y
+        Game.tileSize, // target width
+        Game.tileSize // target height
+      );
+    }
+  }
+}
 
 Game.render = function() {
   this.ctx.canvas.width  = window.innerWidth;
