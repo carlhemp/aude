@@ -18,7 +18,40 @@ class Gameboard {
       board.push(b_row);
     }
     this.board = board;
-    console.log(board);
+    this.overlay;
+  }
+  getEdges(row,column){
+    let tileAbove = (row == 0 ? null : this.board[row - 1][column]);
+    let tileRight = (column == this.board[row].length - 1 ? null : this.board[row][column+1]);
+    let tileBottom = (row == this.board.length - 1 ? null : this.board[row + 1][column]);
+    let tileLeft = (column == 0 ? null : this.board[row][column - 1]);
+    let tileString = [(tileAbove ? tileAbove.bottom : 'wildcard'),
+                      (tileRight ? tileRight.left : 'wildcard'),
+                      (tileBottom ? tileBottom.top : 'wildcard'),
+                      (tileLeft ? tileLeft.right : 'wildcard')];
+    return tileString; 
+  }
+  generateOverlay(tileToMatch){
+    let overlay = [];
+    for(let row = 0; row < this.board.length; row++) { 
+      let o_row = [];
+      for(let column = 0; column < this.board[row].length; column++) { 
+        if(tileToMatch && this.board[row][column] == null){
+          let tileString = this.getEdges(row,column);
+          if(tileString.join("").replace(/wildcard/g, '') != '' && tileToMatch.match(tileString)){
+            o_row.push('highlight');
+          }
+          else { 
+            o_row.push(null);
+          }
+        }
+        else {
+          o_row.push(null);
+        }
+      }
+      overlay.push(o_row);
+    }
+    this.overlay = overlay;
   }
   addTile(tile, row, column) {
     this.board[row][column] = tile;
@@ -37,6 +70,7 @@ class Gameboard {
       this.addColumn(true);
     }
     this.draw();
+    this.generateOverlay(); //clear the overlay layer
   }
   addRow(beginning = false) {
     let row = [];
@@ -66,7 +100,7 @@ class Gameboard {
 
 class Tile {
   constructor(top, right, bottom, left, center, background, shield) {
-    let backgroundTypes = ['grass', 'city', 'water'];
+    let backgroundTypes = ['grass', 'city', 'water', 'mountain'];
     let edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
     let centerTypes = ['abbey', 'garden'];
 
@@ -78,7 +112,7 @@ class Tile {
     this.right = standardizeTile(right);
     this.bottom = standardizeTile(bottom);
     this.left = standardizeTile(left);
-    this.background = (backgroundTypes.includes(background) ? background : backgroundTypes[getRandomInt(3)]);
+    this.background = (backgroundTypes.includes(background) ? background : backgroundTypes[getRandomInt(4)]);
     if(this.background == 'grass'){
       this.center = (centerTypes.includes(center) ? center : centerTypes[getRandomInt(11)]); //centerTypes[randomInt > centerTypes.length adds more chances for null center]
     }
@@ -300,8 +334,8 @@ Game.init = function() {
   this.tileAtlas = Loader.getImage('tiles');
   this.tileSize = 104;
   this.gameboard = new Gameboard([[null,null],[null,null]]);
-  for(let i=1; i < 2; i++){
-    for(let j=1; j < 2; j++){
+  for(let i=1; i < 20; i++){
+    for(let j=1; j < 20; j++){
       this.gameboard.addTile(new Tile(), i, j);
     }
   }
@@ -340,21 +374,32 @@ Game._drawLayer = function(layer) {
   for(var c = startCol; c <= endCol; c++) {
     for(var r = startRow; r <= endRow; r++) {
       var tile = this.gameboard.board[r][c];
+      var overlay = this.gameboard.overlay[r][c];
       //console.log(tile);
       var x = (c - startCol) * Game.tileSize + offsetX;
       var y = (r - startRow) * Game.tileSize + offsetY;
-      this.drawTile(tile, x, y, this.ctx);
+      this.drawTile(tile, x, y, this.ctx, overlay);
     }
   }
 }
 
-Game.drawTile = function(tile, x, y, context) {
+Game.drawTile = function(tile, x, y, context, overlay) {
   if(tile == null) { // null => empty tile
-    drawSprite(context,8,1,0);
+    if(!(overlay instanceof Tile)) {
+      drawSprite(context,8,1,0)
+    }
+    else if(overlay instanceof Tile) { //draw highlights and or / partially placed tile if exists.
+      Game.drawTile(overlay,x,y,context);
+      //drawSprite(context, 8, 2, 2);
+      drawSprite(context, 8, 4, -overlay.rotated*90);
+    }
+    if(overlay == "highlight"){
+      drawSprite(context, 8, 2, 0);
+    }
   }
   else {
     //first draw background
-    let backgroundTypes = ['grass', 'city', 'water'];
+    let backgroundTypes = ['grass', 'city', 'water', 'mountain'];
     let background = backgroundTypes.indexOf(tile.background);
 
     drawSprite(context,null,background,-tile.rotated*90);
@@ -410,7 +455,7 @@ Game.drawTile = function(tile, x, y, context) {
       drawSprite(context, center, 0, -tile.rotated*90);
     }
 
-    //finally draw the shield tiles
+    //draw the shield tiles
     if(tile.shield){
       drawSprite(context, 8, 0, -tile.rotated*90);
     }
@@ -443,7 +488,7 @@ Game.render = function() {
   // draw map background layer
   this._drawLayer(0);
   // draw map top layer
-  this._drawLayer(1);
+  //this._drawLayer(1);
 };
 
 function rotateFlip(backCon, image,tileX,tileY,rotate, flip){
