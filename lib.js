@@ -204,6 +204,35 @@ Loader.getImage = function(key) {
 };
 
 //
+// Touch handler
+//
+
+var Touch = {};
+
+//document.addEventListener("touchstart", touchHandler);
+document.addEventListener("touchstart", touchStart);
+document.addEventListener("touchmove", touchMove);
+document.addEventListener("touchend", touchEnd);
+
+function touchStart(e) {
+  Touch.startX = e.touches[0].pageX;
+  Touch.startY = e.touches[0].pageY;
+}
+function touchMove(e) {
+  if(e.touches) {
+    Game.camera.touchMove(Touch.startX - e.touches[0].pageX, Touch.startY - e.touches[0].pageY);
+
+    Touch.startX = e.touches[0].pageX;
+    Touch.startY = e.touches[0].pageY;
+  }
+}
+function touchEnd(e) {
+  if(e.touches) {
+  
+  }
+}
+
+//
 // Keyboard handler
 //
 
@@ -272,7 +301,7 @@ Game.tick = function(elapsed) {
   window.requestAnimationFrame(this.tick);
 
   // clear previous frame
-  this.ctx.clearRect(0, 0, 512, 512);
+  this.ctx.clearRect(0, 0, this.camera.width, this.camera.height);
 
   // compute delta time in seconds -- also cap it
   var delta = (elapsed - this._previousElapsed) / 1000.0;
@@ -321,6 +350,14 @@ class Camera {
     this.x = Math.max(0, Math.min(this.x, this.maxX));
     this.y = Math.max(0, Math.min(this.y, this.maxY));
   };
+  touchMove(amntx, amnty) {
+    this.x += amntx;
+    this.y += amnty;
+    
+    //clamp values
+    this.x = Math.max(0, Math.min(this.x, this.maxX));
+    this.y = Math.max(0, Math.min(this.y, this.maxY));
+  }
 }
 
 Game.load = function() {
@@ -340,7 +377,8 @@ Game.init = function() {
     }
   }
   this.camera = new Camera();
-  this.drawTile(new Tile(),0,0,this.tilePreview);
+  this.nextTile = new Tile();
+  this.drawTile(this.nextTile,0,0,this.tilePreview);
 };
 
 Game.update = function(delta) {
@@ -353,7 +391,7 @@ Game.update = function(delta) {
   if(Keyboard.isDown(Keyboard.RIGHT)) {
     dirx = 1;
   }
-  if(Keyboard.isDown(Keyboard.UP)) {
+  if(Keyboard.isDown(Keyboard.UP)) {  
     diry = -1;
   }
   if(Keyboard.isDown(Keyboard.DOWN)) {
