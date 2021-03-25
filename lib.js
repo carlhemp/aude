@@ -1,10 +1,36 @@
 function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
 }
+class Player {
+  constructor(name){
+    this.name = name;
+    this.meeples = 7;
+    this.abbot = 1;
+    this.score = 0;
+  }
+  get placeMeeple() {
+    this.meeples -= 1;
+    return {name:this.name, type: 'meeple'};
+  }
+  get placeAbbot() {
+    this.abbot -= 1;
+    return {name:this.name, type: 'abbot'};
+  }
+  scoreMeeple(row,column) {
+    this.meeples += 1;
+    this.score += score(row,column);
+  }
+  scoreAbbot(row,column) {
+    this.abbot += 1;
+    this.score += score(row,column);
+  }
+  score(row,column) {
+    alert('the score!');
+  }
+}
 class Gameboard {
   //array of arrays is a list of rows that represent the board
   constructor(arrayOfArrays) {
-    console.log(arrayOfArrays);
     if(arrayOfArrays == null){
       arrayOfArrays = [[null]];
     }
@@ -18,7 +44,7 @@ class Gameboard {
       board.push(b_row);
     }
     this.board = board;
-    this.overlay;
+    this.overlay = this.generateOverlay();
   }
   getEdges(row,column){
     let tileAbove = (row == 0 ? null : this.board[row - 1][column]);
@@ -242,8 +268,15 @@ Keyboard.LEFT = 37;
 Keyboard.RIGHT = 39;
 Keyboard.UP = 38;
 Keyboard.DOWN = 40;
+Keyboard.ESCAPE = 27;
 
 Keyboard._keys = {};
+
+window.addEventListener('keydown', function(event){ 
+  if(event.key === "Escape") {
+    this.document.getElementById('escapeMenu').classList.toggle('hideUp');
+  }
+});
 
 Keyboard.listenForEvents = function(keys) {
   window.addEventListener('keydown', this._onKeyDown.bind(this));
@@ -320,11 +353,11 @@ Game.render = function() {};
 //
 // start up function
 //
-
-window.onload = function() {
-  var context = document.getElementById('gameboard').getContext('2d');
-  Game.run(context);
-};
+function startGame(){
+  document.getElementById('escapeMenu').classList.add('hideUp');
+  document.getElementById('scrollingBackground').classList.add('paused');
+  Game.run(document.getElementById('gameboard').getContext('2d'));
+}
 
 class Camera {
   constructor() {

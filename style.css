@@ -4,9 +4,60 @@
 
 *{
 	box-sizing: border-box;
-	transition: all .2s;
+	transition: all .5s;
 }
-body {
+body, html {
   margin: 0;
   overflow: hidden;
+}
+img.scrollable {
+  height: 100vh;
+  position:absolute;
+  top:0; 
+  z-index: -1;	
+	animation-duration: 400s;
+  animation-name: backAndForth;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  animation-timing-function: linear;
+}
+.paused {
+  animation-play-state: paused;
+}
+.hideUp {
+	transform: translate3d(0, -110vh, 0);
+}
+.audeImage {
+	height: 20vh;
+}
+#scrollingBackground,
+#escapeMenu {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center; 
+}
+#escapeMenu > div {
+	padding: 2rem 3rem;
+	background: rgba(200,200,200,.5);
+	backdrop-filter: blur(5px);
+	border-radius: 1rem;
+}
+#escapeMenu > div > * {
+	display: block;
+	width: 100%;
+	margin-bottom: 1rem;
+}
+@keyframes backAndForth {
+  from {
+    transform: translate3d(0,0,0);
+  }
+
+  to {
+    transform: translate3d(calc(-100% + 100vw),0,0);
+  }
 }
