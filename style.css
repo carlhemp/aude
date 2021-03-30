@@ -74,7 +74,13 @@ img.scrollable {
 }
 #newPlayers input[type="text"] {
   width: 5rem;
-  margin-right: 1rem;
+}
+.newPlayer {
+  display: flex;
+  align-items: center;
+}
+.newPlayer > *:not(:first-child) {
+  margin-left: 1rem;
 }
 
 .fs-centered {
@@ -126,6 +132,15 @@ img.scrollable {
   height: .5rem;
   width: .5rem;
 }
+.rotate {
+	display: inline-block;
+	height: 1.75rem;
+	width: 1.75rem;
+	transform: rotate(45deg);
+}
+.rotate td {
+	border-color: darkred !important;
+}
 
 /*RIBBON Stuff*/
 .container.hide {
@@ -134,9 +149,8 @@ img.scrollable {
 .ribbon {
 	display:inline-block;
 	width: 180px;
-	height: 280px;
+	height: 0;
 	position: relative;
-	overflow: hidden;
 }
 
 .ribbon .inset {

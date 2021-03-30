@@ -272,6 +272,15 @@ window.addEventListener('keydown', function(event){
     }
   }
 });
+
+window.addEventListener('click', function(event){
+  if(Game.camera && event.target.id == 'gameboard'){
+    let tileColumn = Math.floor((Game.camera.x+event.pageX)/Game.tileSize);
+    let tileRow = Math.floor((Game.camera.y+event.pageY)/Game.tileSize);
+    console.log('clicked on: ', Game.gameboard.board[tileRow][tileColumn]);
+  }
+});;
+
 function showEscapeMenu(){
   this.document.getElementById('escapeMenu').classList.remove('hideUp');
   this.document.getElementById('touchEscape').classList.add('hideUp');
@@ -340,6 +349,12 @@ Game.run = function(context, players) {
   this._previousElapsed = 0;
 
   this.players = players;
+  this.playerIndex = 0;
+
+  this.nextPlayer = function() {
+    this.playerIndex = ((this.playerIndex + 1) % this.players.length);
+    console.log(this.playerIndex);
+  }
 
   var p = this.load();
   Promise.all(p).then(function(loaded) {
@@ -386,6 +401,9 @@ function addPlayer(){
     <div class="newPlayer">
       <input class="name" type="text" placeholder="Name">
       <input class="color" type="color" value="${colors[i]}">
+      <button class="btn_circ rotate" onclick="this.parentElement.remove();">
+        <table class="plusIcon"><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>
+      </button>
     </div>`);
 }
 
@@ -436,9 +454,16 @@ function startGame(){
 }
 
 class Camera {
-  constructor() {
-    this.x = 0;
-    this.y = 0;
+  constructor(centered) {
+    if(centered){
+      this.x = this.maxX/2;
+      this.y = this.maxY/2;
+      console.log(centered, this.x, this.y)
+    }
+    else {
+      this.x = 0;
+      this.y = 0;
+    }
     //-------------------------
     this.SPEED = 1024; // pixels per second
   }
@@ -480,12 +505,22 @@ Game.init = function() {
   this.tileAtlas = Loader.getImage('tiles');
   this.tileSize = 104;
   this.gameboard = new Gameboard([[null,null],[null,null]]);
-  for(let i=1; i < 20; i++){
-    for(let j=1; j < 20; j++){
+  for(let i=1; i < 2; i++){
+    for(let j=1; j < 2; j++){
       this.gameboard.addTile(new Tile(), i, j);
     }
   }
-  this.camera = new Camera();
+  while(this.gameboard.board.length*Game.tileSize < window.screen.height) {
+    this.gameboard.addRow();
+    this.gameboard.addRow(true);
+    this.gameboard.generateOverlay();
+  }
+  while(this.gameboard.board[0].length*Game.tileSize < window.screen.width) {
+    this.gameboard.addColumn();
+    this.gameboard.addColumn(true);
+    this.gameboard.generateOverlay();
+  }
+  this.camera = new Camera(true);
   this.nextTile = new Tile();
   this.drawTile(this.nextTile,0,0,this.tilePreview);
 };
