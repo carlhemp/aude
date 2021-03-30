@@ -2,8 +2,9 @@ function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
 }
 class Player {
-  constructor(name){
+  constructor(name, color){
     this.name = name;
+    this.color = color;
     this.meeples = 7;
     this.abbot = 1;
     this.score = 0;
@@ -16,16 +17,13 @@ class Player {
     this.abbot -= 1;
     return {name:this.name, type: 'abbot'};
   }
-  scoreMeeple(row,column) {
+  scoreMeeple(score) {
     this.meeples += 1;
-    this.score += score(row,column);
+    this.score += score;
   }
-  scoreAbbot(row,column) {
+  scoreAbbot(score) {
     this.abbot += 1;
-    this.score += score(row,column);
-  }
-  score(row,column) {
-    alert('the score!');
+    this.score += score
   }
 }
 class Gameboard {
@@ -258,6 +256,31 @@ function touchEnd(e) {
   }
 }
 
+window.addEventListener('keydown', function(event){ 
+  if(event.key === "Escape") {
+    let escapeMenuVis = !document.getElementById('escapeMenu').classList.contains('hideUp');
+    let newGameMenuVis = !document.getElementById('newGame').classList.contains('hideIn');
+    if(escapeMenuVis){
+      hideEscapeMenu();
+    }
+    else if(newGameMenuVis){
+      this.document.getElementById('newGame').classList.toggle('hideIn');
+      showEscapeMenu();
+    }
+    else {
+      showEscapeMenu();
+    }
+  }
+});
+function showEscapeMenu(){
+  this.document.getElementById('escapeMenu').classList.remove('hideUp');
+  this.document.getElementById('touchEscape').classList.add('hideUp');
+}
+function hideEscapeMenu(){
+  this.document.getElementById('escapeMenu').classList.add('hideUp');
+  this.document.getElementById('touchEscape').classList.remove('hideUp');
+}
+
 //
 // Keyboard handler
 //
@@ -268,15 +291,8 @@ Keyboard.LEFT = 37;
 Keyboard.RIGHT = 39;
 Keyboard.UP = 38;
 Keyboard.DOWN = 40;
-Keyboard.ESCAPE = 27;
 
 Keyboard._keys = {};
-
-window.addEventListener('keydown', function(event){ 
-  if(event.key === "Escape") {
-    this.document.getElementById('escapeMenu').classList.toggle('hideUp');
-  }
-});
 
 Keyboard.listenForEvents = function(keys) {
   window.addEventListener('keydown', this._onKeyDown.bind(this));
@@ -316,12 +332,14 @@ Keyboard.isDown = function(keyCode) {
 
 var Game = {};
 
-Game.run = function(context) {
+Game.run = function(context, players) {
   this.ctx = context;
   this.backContext = document.createElement('canvas');
   this.tilePreview = document.getElementById('tile-preview').getContext('2d');
   this.cache = {};
   this._previousElapsed = 0;
+
+  this.players = players;
 
   var p = this.load();
   Promise.all(p).then(function(loaded) {
@@ -353,10 +371,68 @@ Game.render = function() {};
 //
 // start up function
 //
+function newGame(){
+  hideEscapeMenu();
+  document.getElementById('newGame').classList.remove('hideIn');
+  if(document.getElementById('newPlayers').children.length == 0){
+    addPlayer();
+  }
+}
+
+function addPlayer(){
+  let colors = ["#d41818","#eadf47","#464fb3","#00f03c","#22deec"];
+  let i = document.querySelectorAll('.newPlayer').length;
+  document.getElementById('newPlayers').insertAdjacentHTML('beforeend', `
+    <div class="newPlayer">
+      <input class="name" type="text" placeholder="Name">
+      <input class="color" type="color" value="${colors[i]}">
+    </div>`);
+}
+
+function toggleRibbon(el) {
+  el.classList.toggle('hide');
+}
+
 function startGame(){
-  document.getElementById('escapeMenu').classList.add('hideUp');
+  //clear old player ribbons if any
+  document.querySelectorAll('.ribbon').forEach(function(el){
+    el.remove();
+  }); 
+  //add players to the game
+  let players = [];
+  let playerEls = document.getElementById('newPlayers').children;
+
+  for (var i = 0; i < playerEls.length; i++) {
+    let color = playerEls[i].querySelector('.color').value;
+    let name = playerEls[i].querySelector('.name').value;
+    if(name.trim() == ''){ name = "Player "+(i+1) }
+
+    let player = new Player(name,color);
+
+    players.push(player);
+
+    document.getElementById('gameUi').insertAdjacentHTML('beforeend', 
+      `<div class="ribbon" id="${"player-"+i}" style="--bg-color: ${color}">
+        <div class="inset"></div>
+        <div class="container hide" onclick="toggleRibbon(this);">
+          <div class="base">
+            <h2 style="margin-top: 0; padding-top: 1em;">${name}</h2>
+            <h4 class="meeple"><img src="meeple2d.svg" style="width:1em;"> ${player.meeples}</h4>
+            <h4 class="abbot"><img src="abbot2d.svg" style="width:1em;"> ${player.abbot}</h4>
+          </div>
+          <div class="left_corner"></div>
+          <div class="right_corner"></div>
+        </div>
+      </div>`);
+  }
+
+  //pause scollingBackground, and change UI elements
   document.getElementById('scrollingBackground').classList.add('paused');
-  Game.run(document.getElementById('gameboard').getContext('2d'));
+  document.getElementById('newGame').classList.add('hideIn');
+  document.getElementById('gameUi').classList.remove('hide');
+
+  //startGame
+  Game.run(document.getElementById('gameboard').getContext('2d'), players);
 }
 
 class Camera {

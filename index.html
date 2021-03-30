@@ -18,30 +18,54 @@
   </head>
   <body>
 
-    <img id="scrollingBackground" src="Carcassonne_Cite_md.jpg" class="scrollable">
-    <div id="escapeMenu">
-      <div>
+    <img id="scrollingBackground" src="Carcassonne_Cite_md.jpg" class="scrollable fs-centered">
+    <div id="escapeMenu" class="fs-centered" style="z-index: 100;" onclick="hideEscapeMenu();">
+      <div class="dialog">
         <img src="Aude.svg" class="audeImage">
-        <button onclick="startGame();">Start New Game</button>
+        <button onclick="newGame();">New Game</button>
         <button>Save Game</button>
         <button>Load Game</button>
         <button>Exit Game</button>
         <button>About</button>
       </div>
     </div>
+    <div id="newGame" class="fs-centered hideIn">
+      <div class="dialog">
+        <h2>New Game Setup</h2>
+        <div style="display: flex;">
+          <fieldset>
+            <legend>Players</legend>
+            <span id="newPlayers">
+            </span>
+            <button class="btn_circ" onclick="addPlayer();" style="margin-left: auto;">
+              <table class="plusIcon"><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>
+            </button>
+          </fieldset>
+          <fieldset>
+            <legend>Options</legend>
+          </fieldset>
+          <button style="height: 2rem; margin-top:auto" onclick="startGame();">Start!</button>
+        </div>
+      </div>
+    </div>
     <header>
     </header>
     <main>
       <canvas id="gameboard" width="512" height="512"></canvas>
-      <div style="position: fixed;
-                  bottom: 0;
-                  right: 0;
-                  width: 140px;
-                  height: 140px;
-                  border-start-start-radius: 2rem;
-                  backdrop-filter: blur(15px);
-                  background: rgba(0,0,0,0.4)">
-        <canvas id="tile-preview" width="104" height="104" style="margin: calc((100% - 94px)/2);"></canvas>
+      <div id="gameUi" class="hide">
+        <div id="bottomRight" style="position: fixed;
+                    bottom: 0;
+                    right: 0;
+                    width: 140px;
+                    height: 140px;
+                    border-start-start-radius: 2rem;
+                    backdrop-filter: blur(15px);
+                    background: rgba(0,0,0,0.4)">
+          <canvas id="tile-preview" width="104" height="104" style="margin: calc((100% - 94px)/2);"></canvas>
+        </div>
+        <div style="display: inline-block; vertical-align: top;" id="touchEscape" class="hideUp">
+          <img src="Aude.svg" width="50px" onclick="document.body.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'Escape'}));" style="margin: .5rem;">
+        </div>
       </div>
     </main>
     <footer>

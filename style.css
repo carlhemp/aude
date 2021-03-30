@@ -1,5 +1,15 @@
 :root {
   --variables: '';
+  --drop-shadow: drop-shadow(2px 2px 3px #333);
+}
+input, button,
+html {
+	font-family: "Luminari", fantasy !important;
+}
+
+@font-face {
+  font-family: "Luminari";
+  src: url("Luminari-Regular.ttf");
 }
 
 *{
@@ -10,10 +20,15 @@ body, html {
   margin: 0;
   overflow: hidden;
 }
+fieldset {
+	border-radius: .5rem;
+	display: inline-block;
+}
+button {
+  cursor: pointer;
+}
 img.scrollable {
   height: 100vh;
-  position:absolute;
-  top:0; 
   z-index: -1;	
 	animation-duration: 400s;
   animation-name: backAndForth;
@@ -27,11 +42,42 @@ img.scrollable {
 .hideUp {
 	transform: translate3d(0, -110vh, 0);
 }
+#gameUi.hide #bottomRight {
+	transform: translate3d(200px, 200px,0);
+}
+#gameUi.hide .ribbon {
+	transform: translate3d(0,-400px,0);
+}
+.hideIn {
+	transform: scale3d(0,0,0);
+	opacity: 0;
+}
 .audeImage {
 	height: 20vh;
 }
-#scrollingBackground,
-#escapeMenu {
+#gameUi {
+	position: fixed;
+	top:0;
+	left:0;
+	right:0;
+	bottom:0;
+	pointer-events: none;
+	filter: var(--drop-shadow);
+}
+#gameUi > * {
+	pointer-events: initial;
+}
+
+
+#newPlayers > div {
+	margin-bottom: .5rem;	
+}
+#newPlayers input[type="text"] {
+  width: 5rem;
+  margin-right: 1rem;
+}
+
+.fs-centered {
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -40,17 +86,139 @@ img.scrollable {
   display: flex;
   justify-content: center;
   align-items: center; 
+  z-index: 1;
+  filter: var(--drop-shadow);
 }
-#escapeMenu > div {
+.dialog {
 	padding: 2rem 3rem;
 	background: rgba(200,200,200,.5);
-	backdrop-filter: blur(5px);
 	border-radius: 1rem;
 }
-#escapeMenu > div > * {
+.dialog > * {
 	display: block;
 	width: 100%;
 	margin-bottom: 1rem;
+}
+.btn_circ {
+	display: block;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 100%;
+  border: 1px solid #404040;
+}
+.plusIcon {
+	border-spacing: 0;
+	margin: auto;
+}
+.plusIcon tr:first-child td {
+	border-bottom: 2px solid #404040;
+}
+.plusIcon tr:last-child td {
+	border-top: 2px solid #404040;
+}
+.plusIcon tr > td:first-child {
+	border-right: 2px solid #404040;
+}
+.plusIcon tr > td:last-child {
+	border-left: 2px solid #404040;
+}
+.plusIcon td {
+  height: .5rem;
+  width: .5rem;
+}
+
+/*RIBBON Stuff*/
+.container.hide {
+	transform: translate3d(0, -150px,0);
+}
+.ribbon {
+	display:inline-block;
+	width: 180px;
+	height: 280px;
+	position: relative;
+	overflow: hidden;
+}
+
+.ribbon .inset {
+	width: 200px;
+	height: 55px;
+	position: absolute;
+	top: -50px;
+	left: -10px;
+	z-index: 5;
+	border-radius: 50%;
+	background: rgba(0,0,0,0.3);
+	box-shadow: 0px 5px 10px 0px rgba(0,0,0,0.3);
+}
+
+.ribbon .container {
+	position: relative;
+	width: 100px;
+	height: 250px;
+	overflow: hidden;
+	margin: 0 auto;
+	border-left: 1px solid #404040;
+	border-right: 1px solid #404040;
+}
+
+.ribbon .base {
+	height: 200px;
+	width: 100px;
+
+	text-align: center;
+	
+	background: var(--bg-color);
+	background: linear-gradient(to top, var(--bg-color) 0%, var(--bg-color) 100%);
+
+	position: relative;
+	z-index: 2;
+}
+
+.ribbon .base:after {
+	content: '';
+	position: absolute;
+	top: 0;
+	width: 86px;
+	left: 6px;
+	height: 242px;
+	border-left: 1px dashed #404040;
+	border-right: 1px dashed #404040;
+}
+
+.ribbon .base:before {
+	content: '';
+	position: absolute;
+	top: 0;
+	width: 86px;
+	left: 7px;
+	height: 242px;
+	border-left: 1px dashed #404040;
+	border-right: 1px dashed #404040;
+}
+
+.ribbon .left_corner {
+	width: 100px;
+	height: 100px;
+	background: var(--bg-color);
+	position: absolute;
+	bottom: 20px;
+	left: -50px;
+	z-index: 1;
+	transform: rotate(45deg);
+}
+
+.ribbon .right_corner {
+	width: 100px;
+	height: 100px;
+	background: var(--bg-color);
+	position: absolute;
+	bottom: 20px;
+	right: -50px;
+	z-index: 1;
+	transform: rotate(45deg);
+}
+.shadow {
+	filter: var(--drop-shadow);
 }
 @keyframes backAndForth {
   from {
