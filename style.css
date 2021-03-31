@@ -67,6 +67,16 @@ img.scrollable {
 #gameUi > * {
 	pointer-events: initial;
 }
+#bottomRight {
+	position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 140px;
+  height: 140px;
+  border-start-start-radius: 2rem;
+  backdrop-filter: blur(15px);
+  background: rgba(0,0,0,0.4)
+}
 
 
 #newPlayers > div {

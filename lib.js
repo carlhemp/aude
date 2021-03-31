@@ -94,7 +94,6 @@ class Gameboard {
       this.addColumn(true);
     }
     this.draw();
-    this.generateOverlay(); //clear the overlay layer
   }
   addRow(beginning = false) {
     let row = [];
@@ -164,11 +163,11 @@ class Tile {
       return false;
     }
   }
-  rotateTile(matchThis = false) {
+  rotateTile(matchThis = false, returnTile = false) {
     if(matchThis) {
       let rotations = this.match(matchThis);
       let rotate = 0;
-      if(rotations == false) {
+      if(rotations == false && returnTile == false) {
         return false;
       }
       if(rotations[0] == 0 && rotations.length > 1) {
@@ -177,7 +176,6 @@ class Tile {
       for(let i = 1; i <= rotations[rotate]; i++) {
         this.rotateTile(); //rotate as much as needed
       }
-
       return this; //return a success? or failure?
     } else { //we rotate counter-clockwise
       //keep the meeple connected to it's place.
@@ -277,7 +275,16 @@ window.addEventListener('click', function(event){
   if(Game.camera && event.target.id == 'gameboard'){
     let tileColumn = Math.floor((Game.camera.x+event.pageX)/Game.tileSize);
     let tileRow = Math.floor((Game.camera.y+event.pageY)/Game.tileSize);
-    console.log('clicked on: ', Game.gameboard.board[tileRow][tileColumn]);
+    Game.clickedPosition = {x: tileColumn, y: tileRow}
+    console.log('clicked on: ', Game.gameboard.overlay[tileRow][tileColumn]);
+
+    if(Game.gameboard.overlay[tileRow][tileColumn] == 'highlight'){
+      Game.gameboard.generateOverlay(Game.nextTile);
+      Game.gameboard.overlay[tileRow][tileColumn] = Game.nextTile.rotateTile(Game.gameboard.getEdges(tileRow,tileColumn), true);
+    }
+    else if(Game.gameboard.overlay[tileRow][tileColumn] instanceof Tile){
+      Game.gameboard.overlay[tileRow][tileColumn] = Game.nextTile.rotateTile(Game.gameboard.getEdges(tileRow,tileColumn), true); 
+    }
   }
 });;
 
@@ -523,6 +530,7 @@ Game.init = function() {
   this.camera = new Camera(true);
   this.nextTile = new Tile();
   this.drawTile(this.nextTile,0,0,this.tilePreview);
+  this.gameboard.generateOverlay(this.nextTile);
 };
 
 Game.update = function(delta) {
@@ -573,9 +581,11 @@ Game.drawTile = function(tile, x, y, context, overlay) {
     else if(overlay instanceof Tile) { //draw highlights and or / partially placed tile if exists.
       Game.drawTile(overlay,x,y,context);
       //drawSprite(context, 8, 2, 2);
-      drawSprite(context, 8, 4, -overlay.rotated*90);
+      if(overlay.match(Game.gameboard.getEdges(Game.clickedPosition.y,Game.clickedPosition.x)).length > 1){
+        drawSprite(context, 8, 4, -overlay.rotated*90);
+      }
     }
-    if(overlay == "highlight"){
+    if(overlay != null){
       drawSprite(context, 8, 2, 0);
     }
   }

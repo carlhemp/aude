@@ -53,14 +53,21 @@
     <main>
       <canvas id="gameboard" width="512" height="512"></canvas>
       <div id="gameUi" class="hide">
-        <div id="bottomRight" style="position: fixed;
-                    bottom: 0;
-                    right: 0;
-                    width: 140px;
-                    height: 140px;
-                    border-start-start-radius: 2rem;
-                    backdrop-filter: blur(15px);
-                    background: rgba(0,0,0,0.4)">
+        <div id="bottomRight">
+          <button class="btn_circ" onclick="" style="    position: fixed;
+    bottom: 1rem;
+    color: green;
+    right: 125px;
+    font-weight: bolder;">
+            ✓
+          </button>
+          <button class="btn_circ" onclick="" style="    position: fixed;
+    bottom: 5rem;
+    color: darkred;
+    right: 125px;
+    font-weight: bolder;">
+            ✗
+          </button>
           <canvas id="tile-preview" width="104" height="104" style="margin: calc((100% - 94px)/2);"></canvas>
         </div>
         <div style="display: inline-block; vertical-align: top;" id="touchEscape" class="hideUp">
