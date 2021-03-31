@@ -1,6 +1,21 @@
 function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
 }
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', {
+    scope: './'
+  })
+  .then((serviceWorker) => {
+    console.log('service worker registration successful');
+  })
+  .catch((err) => {
+    console.error('service worker registration failed');
+    console.error(err);
+  });
+} else {
+  console.log('service worker unavailable');
+}
+
 class Player {
   constructor(name, color){
     this.name = name;
