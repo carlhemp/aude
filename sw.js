@@ -4,7 +4,21 @@ var prefetchedURLs = [
   'meeple2d.svg',
   'Aude.svg',
   'Carcassonne_Cite_md.jpg',
-  'Luminari-Regular.ttf'
+  'Luminari-Regular.ttf',
+  'index.html',
+  'lib.js',
+  'sw.js',
+  'style.css',
+  'tilemap.png',
+  'manifest.webmanifest'
+];
+var updateURLS = [
+  'index.html',
+  'lib.js',
+  'sw.js',
+  'style.css',
+  'tilemap.png',
+  'manifest.webmanifest'
 ];
 
 self.addEventListener('install', function(evt) {
@@ -15,7 +29,7 @@ self.addEventListener('install', function(evt) {
 self.addEventListener('fetch', function(evt) {
   console.log('The service worker is serving the asset.');
   evt.respondWith(fromCache(evt.request));
-  //evt.waitUntil(update(evt.request));
+  evt.waitUntil(update(evt.request));
 });
 
 function precache() {
