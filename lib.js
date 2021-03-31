@@ -275,15 +275,17 @@ window.addEventListener('click', function(event){
   if(Game.camera && event.target.id == 'gameboard'){
     let tileColumn = Math.floor((Game.camera.x+event.pageX)/Game.tileSize);
     let tileRow = Math.floor((Game.camera.y+event.pageY)/Game.tileSize);
-    Game.clickedPosition = {x: tileColumn, y: tileRow}
-    console.log('clicked on: ', Game.gameboard.overlay[tileRow][tileColumn]);
 
-    if(Game.gameboard.overlay[tileRow][tileColumn] == 'highlight'){
-      Game.gameboard.generateOverlay(Game.nextTile);
-      Game.gameboard.overlay[tileRow][tileColumn] = Game.nextTile.rotateTile(Game.gameboard.getEdges(tileRow,tileColumn), true);
-    }
-    else if(Game.gameboard.overlay[tileRow][tileColumn] instanceof Tile){
-      Game.gameboard.overlay[tileRow][tileColumn] = Game.nextTile.rotateTile(Game.gameboard.getEdges(tileRow,tileColumn), true); 
+    if(Game.gameboard.overlay[tileRow][tileColumn] != null){
+      Game.clickedPosition = {x: tileColumn, y: tileRow}
+
+      if(Game.gameboard.overlay[tileRow][tileColumn] == 'highlight'){
+        Game.gameboard.generateOverlay(Game.nextTile);
+        Game.gameboard.overlay[tileRow][tileColumn] = Game.nextTile.rotateTile(Game.gameboard.getEdges(tileRow,tileColumn), true);
+      }
+      else if(Game.gameboard.overlay[tileRow][tileColumn] instanceof Tile){
+        Game.gameboard.overlay[tileRow][tileColumn] = Game.nextTile.rotateTile(Game.gameboard.getEdges(tileRow,tileColumn), true); 
+      }
     }
   }
 });;
