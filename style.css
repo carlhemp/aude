@@ -183,6 +183,7 @@ img.scrollable {
 	margin: 0 auto;
 	border-left: 1px solid #404040;
 	border-right: 1px solid #404040;
+	cursor: pointer;
 }
 
 .ribbon .base {

@@ -482,7 +482,6 @@ class Camera {
     if(centered){
       this.x = this.maxX/2;
       this.y = this.maxY/2;
-      console.log(centered, this.x, this.y)
     }
     else {
       this.x = 0;
@@ -534,12 +533,13 @@ Game.init = function() {
       this.gameboard.addTile(new Tile(), i, j);
     }
   }
-  while(this.gameboard.board.length*Game.tileSize < window.screen.height) {
+  let boardSize = Math.max(window.screen.height, window.screen.width)
+  while(this.gameboard.board.length*Game.tileSize < boardSize) {
     this.gameboard.addRow();
     this.gameboard.addRow(true);
     this.gameboard.generateOverlay();
   }
-  while(this.gameboard.board[0].length*Game.tileSize < window.screen.width) {
+  while(this.gameboard.board[0].length*Game.tileSize < boardSize) {
     this.gameboard.addColumn();
     this.gameboard.addColumn(true);
     this.gameboard.generateOverlay();
@@ -628,11 +628,13 @@ Game.drawTile = function(tile, x, y, context, overlay) {
 
     //then draw diagonals and through
     if(background == edgeTypes.indexOf('grass')){
+      //draw diagonals - update this for city pieces - not working quite how we want.
       if(top == right) { drawSprite(context,top,4,0) }
       if(right == bottom) { drawSprite(context,right,4,90) }
       if(bottom == left) { drawSprite(context,bottom,4,180) }
       if(left == top) { drawSprite(context,left,4,270) }
-
+      
+      //draw through pieces
       if(top == bottom && top != left && top != right) { 
         if(tile.center){
           drawSprite(context,top,4,0);
