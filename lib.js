@@ -70,6 +70,73 @@ class Gameboard {
                       (tileLeft ? tileLeft.right : 'wildcard')];
     return tileString; 
   }
+  setPossibleMeeple(tile, row,column){
+    let topMeeple = checkMeeple(tile.right,row-1,column, 'bottom'); //going to the top
+    let rightMeeple = checkMeeple(tile.right,row,column+1, 'left'); //going to the right
+    let bottomMeeple = checkMeeple(tile.right,row+1,column, 'top'); //going to the bottom
+    let leftMeeple = checkMeeple(tile.right,row,column-1, 'right'); //going to the left
+
+    if(tile.center == 'abbey' || tile.center == 'garden'){
+    	let centerMeeple = true;
+    }
+  }
+  checkMeeple(type,row,column, from){
+  	if(type != 'road' || type != 'city') {
+  		return false;  // only road and city edge pieces can hold meeple
+  	}
+
+  	let tile = Game.gameboard.board[row][column];
+  	if(tile == null) { //no tile is placed, so it's all good!
+  	  return true; //this also fixes a potential infinite loop with a road that ends on the tile that is being placed.
+  	}  
+  	else if(type == "road"){
+  		if(tile.meeple.placement == from){  //there's a meeple on the other side right away.
+  			console.log('meeple on road next to previous tile');
+  			return false;
+  		}
+  		let road_count = (tile.top == "road") + (tile.right == "road") + (tile.bottom == "road") + (tile.left == "road");
+  		if(road_count != 2){  // there was no meeple on the border and there is an odd number of roads so the road ends in this tile
+  			console.log('there is no meeple next to previous tile and there are an odd number of roads');
+        return true;
+  		}
+  		else {  // we have a road that goes through
+  			let options = ['top', 'right', 'bottom', 'left'];
+  			//find other road edge
+  			filtered_options = options.filter(item => item !== from);
+  			for(edge of filtered_options){
+  				if(tile[edge] == 'road') { //we found the other edge
+            if(tile.meeple.placement == edge){
+            	console.log('meeple was on the far side of the tile where the road exits');
+            	return false;
+            }
+            else { //we must check the next tile
+            	let from = options[(options.indexOf(edge) + 2) % 4]; //find the opposite side of the edge
+            	if(edge == 'top') {row -= 1 };
+            	if(edge == 'right') {column += 1 };
+            	if(edge == 'bottom') {row += 1 };
+            	if(edge == 'left') {column -= 1 };
+
+            	console.log("there's a through road and I'm following it to the next tile");
+            	return checkMeeple('road', row, column, from); //let's run this function on the next tile.
+            }
+  				}
+  			}
+  		}
+  	}
+  	else if(type == "city"){  //we could get into a loop if we're not careful.
+  		if(tile.meeple.placement == from){ //there's a meeple on the other side
+        console.log('meeple in city next to previous tile');
+	      return false;
+  		}
+  		//if city is on grass and there is no city edge either right or left, then we return true
+
+  		//if city is on grass and there's a proximate city edge we need to check that meeple position and follow to next tile
+
+  		//if city is on city, then we need to check center meeple position and we need to check all edge city pieces's proximate tiles
+
+  	}
+
+  }
   generateOverlay(tileToMatch){
     let overlay = [];
     for(let row = 0; row < this.board.length; row++) { 
@@ -158,7 +225,7 @@ class Tile {
       this.shield = ([0].indexOf(getRandomInt(9)) == 0 ? 1 : 0);
     }
     this.rotated = 0;
-    this.meeple = null;
+    this.meeple = null; //{type: , name: , placement: }
 
     return this;
   }
@@ -195,8 +262,8 @@ class Tile {
     } else { //we rotate counter-clockwise
       //keep the meeple connected to it's place.
       let options = ['top', 'right', 'bottom', 'left'];
-      if(this.meeple && this.meeple != ('center' || 'background')) {
-        this.meeple = options[(options.indexOf(this.meeple) + 3) % 4];
+      if(this.meeple && this.meeple.placement != ('center' || 'background')) {
+        this.meeple.placement = options[(options.indexOf(this.meeple.placement) + 3) % 4];
       }
       let tmp = this.top;
       this.top = this.right;
