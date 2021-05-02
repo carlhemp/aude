@@ -23,6 +23,17 @@ class Player {
     this.meeples = 7;
     this.abbot = 1;
     this.score = 0;
+
+    let coloredMeepleImage = (new XMLSerializer).serializeToString(document.getElementById('meeple')).replace(/#fff/g,color);
+    let coloredAbbotImage = (new XMLSerializer).serializeToString(document.getElementById('abbot')).replace(/#fff/g,color);
+    let meepleSvg = new Blob([coloredMeepleImage], {type: "image/svg+xml"});
+    let meepleUrl = URL.createObjectURL(meepleSvg);
+    this.meepleImage = new Image(Game.tileSize/5,Game.tileSize/5);
+    this.meepleImage.src = meepleUrl;
+    let abbotSvg = new Blob([coloredAbbotImage], {type: "image/svg+xml"});
+    let abbotUrl = URL.createObjectURL(abbotSvg);
+    this.abbotImage = new Image(Game.tileSize/5,Game.tileSize/5);
+    this.abbotImage.src = abbotUrl
   }
   get placeMeeple() {
     this.meeples -= 1;
@@ -70,44 +81,83 @@ class Gameboard {
                       (tileLeft ? tileLeft.right : 'wildcard')];
     return tileString; 
   }
-  setPossibleMeeple(tile, row,column){
-    let topMeeple = checkMeeple(tile.right,row-1,column, 'bottom'); //going to the top
-    let rightMeeple = checkMeeple(tile.right,row,column+1, 'left'); //going to the right
-    let bottomMeeple = checkMeeple(tile.right,row+1,column, 'top'); //going to the bottom
-    let leftMeeple = checkMeeple(tile.right,row,column-1, 'right'); //going to the left
+  setPossibleMeeple(tile,row,column){
+    tile.possibleMeeple = [];
+    let topMeeple = this.checkMeeple(tile.top,row-1,column, 'bottom'); //going to the top
+    let rightMeeple = this.checkMeeple(tile.right,row,column+1, 'left'); //going to the right
+    let bottomMeeple = this.checkMeeple(tile.bottom,row+1,column, 'top'); //going to the bottom
+    let leftMeeple = this.checkMeeple(tile.left,row,column-1, 'right'); //going to the left
+    topMeeple.direction = 'top';
+    rightMeeple.direction = 'right';
+    bottomMeeple.direction = 'bottom';
+    leftMeeple.direction = 'left';
 
+    let centerMeeple = {type:null,canMeeple:false};
     if(tile.center == 'abbey' || tile.center == 'garden'){
-    	let centerMeeple = true;
+    	centerMeeple = {type: tile.center, canMeeple:true};
     }
+    console.log(topMeeple,rightMeeple,bottomMeeple,leftMeeple,centerMeeple);
+    //check for roads that are through
+    let road_count = [topMeeple,rightMeeple,bottomMeeple,leftMeeple,centerMeeple].filter(edge => edge.type == 'road');
+    if(road_count.length == 2 && tile.background == 'grass'){
+    	//check to see if both roads are canMeeple, then add one meeple position
+    	if(road_count.filter(edge => edge.canMeeple).length == 2) {
+    		tile.possibleMeeple.push(road_count[0].direction);
+    	}
+    }
+    else if(road_count.length > 0) {
+    	for(const edge of road_count){ //put meeple possibility.
+    		if(edge.canMeeple){
+	        tile.possibleMeeple.push(edge.direction);
+    		}
+     	}
+    }
+    //cities that connect, then display appropriate meeples
+    let city_count = [topMeeple,rightMeeple,bottomMeeple,leftMeeple,centerMeeple].filter(edge => edge.type == 'city' && edge.canMeeple);
+    for(const edge of city_count) {
+    	tile.possibleMeeple.push(edge.direction);
+    }
+    if(centerMeeple.canMeeple){
+    	tile.possibleMeeple.push('center');
+    }
+
+    console.log(road_count);
   }
-  checkMeeple(type,row,column, from){
-  	if(type != 'road' || type != 'city') {
-  		return false;  // only road and city edge pieces can hold meeple
+  checkMeeple(type,row,column,from){
+  	console.log(type,row,column,from);
+  	if(type != 'road' && type != 'city') {
+  		console.log('not a road or city piece, so no possible meeples.')
+  		return {type: type, canMeeple:false};  // only road and city edge pieces can hold meeple
   	}
 
   	let tile = Game.gameboard.board[row][column];
   	if(tile == null) { //no tile is placed, so it's all good!
-  	  return true; //this also fixes a potential infinite loop with a road that ends on the tile that is being placed.
-  	}  
+  		console.log('there is no tile here, so yep! you can put a meeple if you would like to');
+  	  return {type: type, canMeeple:true}; //this also fixes a potential infinite loop with a road that ends on the tile that is being placed.
+  	}
   	else if(type == "road"){
-  		if(tile.meeple.placement == from){  //there's a meeple on the other side right away.
+  		if(tile.meeple && tile.meeple.placement == from){  //there's a meeple on the other side right away.
   			console.log('meeple on road next to previous tile');
-  			return false;
+  			return {type: type, canMeeple:false};
   		}
   		let road_count = (tile.top == "road") + (tile.right == "road") + (tile.bottom == "road") + (tile.left == "road");
-  		if(road_count != 2){  // there was no meeple on the border and there is an odd number of roads so the road ends in this tile
-  			console.log('there is no meeple next to previous tile and there are an odd number of roads');
-        return true;
+  		if(road_count != 2){  // there was no meeple on the border and there are not only 2 roads on the tile;
+  			console.log('there is no meeple next to previous tile and there are not only 2 roads on a grass backround');
+        return {type: type, canMeeple:true};
   		}
-  		else {  // we have a road that goes through
+  		else if(tile.background != 'grass'){ //if background is != grass, the road does not go through, and so we good
+  			console.log('there is no meeple next to previous tile and background is not grass, so road cannot go through');
+  			return {type: type, canMeeple:true};
+  		}
+  		else {  // we have a road that goes through on grass
   			let options = ['top', 'right', 'bottom', 'left'];
   			//find other road edge
-  			filtered_options = options.filter(item => item !== from);
-  			for(edge of filtered_options){
+  			let filtered_options = options.filter(item => item !== from);
+  			for(const edge of filtered_options){
   				if(tile[edge] == 'road') { //we found the other edge
-            if(tile.meeple.placement == edge){
+            if(tile.meeple && tile.meeple.placement == edge){
             	console.log('meeple was on the far side of the tile where the road exits');
-            	return false;
+            	return {type: type, canMeeple:false};
             }
             else { //we must check the next tile
             	let from = options[(options.indexOf(edge) + 2) % 4]; //find the opposite side of the edge
@@ -117,23 +167,45 @@ class Gameboard {
             	if(edge == 'left') {column -= 1 };
 
             	console.log("there's a through road and I'm following it to the next tile");
-            	return checkMeeple('road', row, column, from); //let's run this function on the next tile.
+            	return this.checkMeeple('road', row, column, from); //let's run this function on the next tile.
             }
   				}
   			}
   		}
   	}
   	else if(type == "city"){  //we could get into a loop if we're not careful.
-  		if(tile.meeple.placement == from){ //there's a meeple on the other side
+
+  		if(tile.meeple && tile.meeple.placement == from){ //there's a meeple on the other side
         console.log('meeple in city next to previous tile');
-	      return false;
+	      return {type: type, canMeeple:false};
   		}
+  		else {
+  			console.log('not sure and not checking if this city is meepleable right now... work on this later.');
+  			return {type: type, canMeeple:true};
+  		}
+  		/*
   		//if city is on grass and there is no city edge either right or left, then we return true
+  		else if(tile.background == 'grass'){
+  			if((from == 'top' || from == 'bottom') && !(tile.right == 'city' || tile.left == 'city')){
+
+  			}
+  			else if((from == 'right' || from == 'left') && !(tile.top == 'city' || tile.bottom == 'city')){
+  				
+  			}
+  			else { //we have a city piece next to us in one direction or another... check that one.
+  				//first find the city piece
+
+  			}
+  		}
 
   		//if city is on grass and there's a proximate city edge we need to check that meeple position and follow to next tile
 
   		//if city is on city, then we need to check center meeple position and we need to check all edge city pieces's proximate tiles
-
+*/
+  	}
+  	else {
+  		console.log('not sure what\'s going on, soo... check this out');
+  		return {type: type, canMeeple: true};
   	}
 
   }
@@ -358,7 +430,7 @@ window.addEventListener('click', function(event){
     let tileColumn = Math.floor((Game.camera.x+event.pageX)/Game.tileSize);
     let tileRow = Math.floor((Game.camera.y+event.pageY)/Game.tileSize);
 
-    if(Game.gameboard.overlay[tileRow][tileColumn] != null){
+    if(!Game.placeMeeple && Game.gameboard.overlay[tileRow][tileColumn] != null){
       Game.clickedPosition = {x: tileColumn, y: tileRow}
 
       if(Game.gameboard.overlay[tileRow][tileColumn] == 'highlight'){
@@ -369,8 +441,11 @@ window.addEventListener('click', function(event){
         Game.gameboard.overlay[tileRow][tileColumn] = Game.nextTile.rotateTile(Game.gameboard.getEdges(tileRow,tileColumn), true); 
       }
     }
+    else if(Game.placeMeeple && Game.gameboard.overlay[tileRow][tileColumn] instanceof Tile) { // if we are in meeple placement teritory.
+      
+    }
   }
-});;
+});
 
 function showEscapeMenu(){
   this.document.getElementById('escapeMenu').classList.remove('hideUp');
@@ -441,6 +516,8 @@ Game.run = function(context, players) {
 
   this.players = players;
   this.playerIndex = 0;
+
+  this.placeMeeple = false;
 
   this.nextPlayer = function() {
     this.playerIndex = ((this.playerIndex + 1) % this.players.length);
@@ -528,6 +605,7 @@ function startGame(){
             <h2 style="margin-top: 0; padding-top: 1em;">${name}</h2>
             <h4 class="meeple"><img src="meeple2d.svg" style="width:1em;"> ${player.meeples}</h4>
             <h4 class="abbot"><img src="abbot2d.svg" style="width:1em;"> ${player.abbot}</h4>
+            <h4 class="score">${player.score}</h4>
           </div>
           <div class="left_corner"></div>
           <div class="right_corner"></div>
@@ -549,7 +627,6 @@ class Camera {
     if(centered){
       this.x = this.maxX/2;
       this.y = this.maxY/2;
-      console.log(centered, this.x, this.y)
     }
     else {
       this.x = 0;
@@ -615,6 +692,17 @@ Game.init = function() {
   this.nextTile = new Tile();
   this.drawTile(this.nextTile,0,0,this.tilePreview);
   this.gameboard.generateOverlay(this.nextTile);
+
+  let coloredMeepleImage = (new XMLSerializer).serializeToString(document.getElementById('meeple'));
+  let coloredAbbotImage = (new XMLSerializer).serializeToString(document.getElementById('abbot'));
+  var meepleSvg = new Blob([coloredMeepleImage], {type: "image/svg+xml"});
+  var meepleUrl = URL.createObjectURL(meepleSvg);
+  var abbotSvg = new Blob([coloredMeepleImage], {type: "image/svg+xml"});
+  var abbotUrl = URL.createObjectURL(abbotSvg);
+  this.meepleImage = new Image(Game.tileSize/5,Game.tileSize/5);
+  this.meepleImage.src = meepleUrl;
+  this.abbotImage = new Image(Game.tileSize/5,Game.tileSize/5);
+  this.abbotImage.src = abbotUrl;
 };
 
 Game.update = function(delta) {
@@ -656,21 +744,34 @@ Game._drawLayer = function(layer) {
     }
   }
 }
-
+function enterPlaceMeeple(){
+	Game.placeMeeple = true; 
+	Game.gameboard.setPossibleMeeple(Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x], Game.clickedPosition.x,Game.clickedPosition.y);
+	if(Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x].possibleMeeple.length == 0){
+		//Score Tile and move on.
+	}
+}
+function leavePlaceMeeple(){
+	Game.placeMeeple = false;
+	Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x].possibleMeeple = null;
+}
 Game.drawTile = function(tile, x, y, context, overlay) {
   if(tile == null) { // null => empty tile
-    if(!(overlay instanceof Tile)) {
+    if(!(overlay instanceof Tile)) { //draw background wood pattern
       drawSprite(context,8,1,0)
     }
     else if(overlay instanceof Tile) { //draw highlights and or / partially placed tile if exists.
       Game.drawTile(overlay,x,y,context);
       //drawSprite(context, 8, 2, 2);
-      if(overlay.match(Game.gameboard.getEdges(Game.clickedPosition.y,Game.clickedPosition.x)).length > 1){
+      if(!Game.placeMeeple && overlay.match(Game.gameboard.getEdges(Game.clickedPosition.y,Game.clickedPosition.x)).length > 1){
         drawSprite(context, 8, 4, -overlay.rotated*90);
       }
     }
-    if(overlay != null){
+    if(!Game.placeMeeple && overlay == 'highlight'){
       drawSprite(context, 8, 2, 0);
+    }
+    if(!Game.placeMeeple && overlay instanceof Tile){
+      drawSprite(context, 8, 3, 0);
     }
   }
   else {
@@ -735,6 +836,48 @@ Game.drawTile = function(tile, x, y, context, overlay) {
     if(tile.shield){
       drawSprite(context, 8, 0, -tile.rotated*90);
     }
+
+    //draw meeples
+    if(tile.meeple){
+    	drawMeeple(context, tile.meeple.placement, Game.players[Game.playerIndex].meepleImage);
+    }
+    if(tile.possibleMeeple && tile.possibleMeeple.length > 0){
+	    for(const place of tile.possibleMeeple){
+	    	drawMeeple(context, place, Game.meepleImage);
+	    }	
+    }
+  }
+  function drawMeeple(context, placement, meepleImage){
+  	let tx = Math.round(x);
+  	let ty = Math.round(y);
+  	
+  	if(placement == 'top'){
+  		tx += Game.tileSize/2 - Game.tileSize/5/2;
+  		ty += Game.tileSize/20;    
+  	}
+  	else if(placement == 'right'){
+  		tx += Game.tileSize - Game.tileSize/20 - Game.tileSize/5;
+  		ty += Game.tileSize/2 - Game.tileSize/5/2;    
+  	}
+  	else if(placement == 'bottom'){
+  		tx += Game.tileSize/2 - Game.tileSize/5/2;
+  		ty += Game.tileSize - Game.tileSize/20 - Game.tileSize/5;
+  	}
+  	else if(placement == 'left'){
+  		tx += Game.tileSize/20;
+  		ty += Game.tileSize/2 - Game.tileSize/5/2; 
+  	}
+  	else if(placement == 'center'){
+  		tx += Game.tileSize/2 - Game.tileSize/5/2;
+  		ty += Game.tileSize/2 - Game.tileSize/5/2;
+  	}
+  	context.drawImage(
+  		meepleImage,
+  		tx, //target x
+  		ty, //target y
+  		Game.tileSize/5, //target width  
+  		Game.tileSize/5  //target height
+		);
   }
   function drawSprite(context, tile, background, rotation){
     if(tile != background || background > 3 || tile == null){

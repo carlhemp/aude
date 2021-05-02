@@ -120,7 +120,7 @@ img.scrollable {
   width: 2rem;
   height: 2rem;
   border-radius: 100%;
-  border: 1px solid #404040;
+  border: none;
 }
 .plusIcon {
 	border-spacing: 0;
