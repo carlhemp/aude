@@ -77,6 +77,9 @@ img.scrollable {
   backdrop-filter: blur(15px);
   background: rgba(0,0,0,0.4)
 }
+#bottomRight .hide {
+  display: none;
+}
 
 
 #newPlayers > div {
@@ -120,7 +123,7 @@ img.scrollable {
   width: 2rem;
   height: 2rem;
   border-radius: 100%;
-  border: 1px solid #404040;
+  border: none;
 }
 .plusIcon {
 	border-spacing: 0;
