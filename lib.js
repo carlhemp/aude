@@ -28,11 +28,11 @@ class Player {
     let coloredAbbotImage = (new XMLSerializer).serializeToString(document.getElementById('abbot')).replace(/#fff/g,color);
     let meepleSvg = new Blob([coloredMeepleImage], {type: "image/svg+xml"});
     let meepleUrl = URL.createObjectURL(meepleSvg);
-    this.meepleImage = new Image(Game.tileSize/5,Game.tileSize/5);
+    this.meepleImage = new Image(Game.tileSize/4,Game.tileSize/4);
     this.meepleImage.src = meepleUrl;
     let abbotSvg = new Blob([coloredAbbotImage], {type: "image/svg+xml"});
     let abbotUrl = URL.createObjectURL(abbotSvg);
-    this.abbotImage = new Image(Game.tileSize/5,Game.tileSize/5);
+    this.abbotImage = new Image(Game.tileSize/4,Game.tileSize/4);
     this.abbotImage.src = abbotUrl;
     this.playerID = id;
   }
@@ -935,8 +935,8 @@ Game.drawTile = function(tile, x, y, context, overlay) {
   		meepleImage,
   		tx, //target x
   		ty, //target y
-  		Game.tileSize/5, //target width  
-  		Game.tileSize/5  //target height
+  		Game.tileSize/4, //target width  
+  		Game.tileSize/4  //target height
 		);
   }
   function drawSprite(context, tile, background, rotation){
