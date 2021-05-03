@@ -54,7 +54,7 @@
       <canvas id="gameboard" width="512" height="512"></canvas>
       <div id="gameUi" class="hide">
         <div id="bottomRight">
-          <button class="btn_circ" onclick="enterPlaceMeeple();" style="    position: fixed;
+          <button class="btn_circ hide" id="btm_right_check" onclick="enterPlaceMeeple();" style="    position: fixed;
     bottom: 1rem;
     background: green;
     color: white;
@@ -62,7 +62,7 @@
     font-weight: bolder;">
             ✓
           </button>
-          <button class="btn_circ" onclick="leavePlaceMeeple();" style="    position: fixed;
+          <button class="btn_circ hide" id="btm_right_close" onclick="leavePlaceMeeple();" style="position: fixed;
     bottom: 5rem;
     background: darkred;
     color: white;

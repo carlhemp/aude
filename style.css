@@ -77,6 +77,9 @@ img.scrollable {
   backdrop-filter: blur(15px);
   background: rgba(0,0,0,0.4)
 }
+#bottomRight .hide {
+  display: none;
+}
 
 
 #newPlayers > div {

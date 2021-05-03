@@ -17,7 +17,7 @@ if ('serviceWorker' in navigator) {
 }
 
 class Player {
-  constructor(name, color){
+  constructor(name, color, id){
     this.name = name;
     this.color = color;
     this.meeples = 7;
@@ -33,15 +33,16 @@ class Player {
     let abbotSvg = new Blob([coloredAbbotImage], {type: "image/svg+xml"});
     let abbotUrl = URL.createObjectURL(abbotSvg);
     this.abbotImage = new Image(Game.tileSize/5,Game.tileSize/5);
-    this.abbotImage.src = abbotUrl
+    this.abbotImage.src = abbotUrl;
+    this.playerID = id;
   }
-  get placeMeeple() {
+  placeMeeple(placement) {
     this.meeples -= 1;
-    return {name:this.name, type: 'meeple'};
+    return {name:this.name, type: 'meeple', playerID: this.playerID, placement:placement};
   }
-  get placeAbbot() {
+  placeAbbot(placement) {
     this.abbot -= 1;
-    return {name:this.name, type: 'abbot'};
+    return {name:this.name, type: 'abbot', playerID: this.playerID, placement:placement};
   }
   scoreMeeple(score) {
     this.meeples += 1;
@@ -93,7 +94,7 @@ class Gameboard {
     leftMeeple.direction = 'left';
 
     let centerMeeple = {type:null,canMeeple:false};
-    if(tile.center == 'abbey' || tile.center == 'garden'){
+    if(tile.center == 'abbey' || tile.center == 'garden' || tile.background == 'city'){
     	centerMeeple = {type: tile.center, canMeeple:true};
     }
     console.log(topMeeple,rightMeeple,bottomMeeple,leftMeeple,centerMeeple);
@@ -397,7 +398,7 @@ function touchStart(e) {
 function touchMove(e) {
   if(e.touches) {
     Game.camera.touchMove(Touch.startX - e.touches[0].pageX, Touch.startY - e.touches[0].pageY);
-
+  	Game.needsUpdate = true;
     Touch.startX = e.touches[0].pageX;
     Touch.startY = e.touches[0].pageY;
   }
@@ -426,11 +427,14 @@ window.addEventListener('keydown', function(event){
 });
 
 window.addEventListener('click', function(event){
+	Game.needsUpdate = true;
   if(Game.camera && event.target.id == 'gameboard'){
     let tileColumn = Math.floor((Game.camera.x+event.pageX)/Game.tileSize);
     let tileRow = Math.floor((Game.camera.y+event.pageY)/Game.tileSize);
 
     if(!Game.placeMeeple && Game.gameboard.overlay[tileRow][tileColumn] != null){
+      document.getElementById('btm_right_close').classList.remove('hide');
+      document.getElementById('btm_right_check').classList.remove('hide');
       Game.clickedPosition = {x: tileColumn, y: tileRow}
 
       if(Game.gameboard.overlay[tileRow][tileColumn] == 'highlight'){
@@ -442,7 +446,26 @@ window.addEventListener('click', function(event){
       }
     }
     else if(Game.placeMeeple && Game.gameboard.overlay[tileRow][tileColumn] instanceof Tile) { // if we are in meeple placement teritory.
+    	//check if we are clicking near a possible meeple
+      let tile = Game.gameboard.overlay[tileRow][tileColumn];
+      let insideX = Game.camera.x+event.pageX - Game.tileSize*tileColumn; 
+      let insideY = Game.camera.y+event.pageY - Game.tileSize*tileRow; 
+      let tileSize = Game.tileSize;
+      let placement = null;
       
+      let sides = [{side: 'left',   distance:insideX},
+                   {side: 'top',    distance:insideY},
+                   {side: 'right',  distance:tileSize - insideX},
+                   {side: 'bottom', distance:tileSize - insideY}].sort((a,b) => (a.distance > b.distance) ? 1 : -1);
+
+      placement = sides[0].side;
+
+      if(insideX > tileSize/3 && insideX < tileSize*2/3 && insideY > tileSize/3 && insideY < tileSize*2/3) {
+        placement = 'center';
+      }
+      if(tile.possibleMeeple.indexOf(placement) > -1){
+        tile.meeple = Game.players[Game.playerIndex].placeMeeple(placement);
+      }
     }
   }
 });
@@ -534,16 +557,17 @@ Game.run = function(context, players) {
 Game.tick = function(elapsed) {
   window.requestAnimationFrame(this.tick);
 
-  // clear previous frame
-  this.ctx.clearRect(0, 0, this.camera.width, this.camera.height);
-
   // compute delta time in seconds -- also cap it
   var delta = (elapsed - this._previousElapsed) / 1000.0;
   delta = Math.min(delta, 0.25); // maximum delta of 250 ms
   this._previousElapsed = elapsed;
 
   this.update(delta);
-  this.render();
+  if(this.needsUpdate){
+    // clear previous frame
+    this.ctx.clearRect(0, 0, this.camera.width, this.camera.height);
+    this.render();
+  }
 }.bind(Game);
 
 // override these methods to create the demo
@@ -593,14 +617,14 @@ function startGame(){
     let name = playerEls[i].querySelector('.name').value;
     if(name.trim() == ''){ name = "Player "+(i+1) }
 
-    let player = new Player(name,color);
+    let player = new Player(name,color, i);
 
     players.push(player);
 
     document.getElementById('gameUi').insertAdjacentHTML('beforeend', 
       `<div class="ribbon" id="${"player-"+i}" style="--bg-color: ${color}">
         <div class="inset"></div>
-        <div class="container hide" onclick="toggleRibbon(this);">
+        <div class="container ${(i == 0 ? '' : 'hide')}" onclick="toggleRibbon(this);">
           <div class="base">
             <h2 style="margin-top: 0; padding-top: 1em;">${name}</h2>
             <h4 class="meeple"><img src="meeple2d.svg" style="width:1em;"> ${player.meeples}</h4>
@@ -703,6 +727,8 @@ Game.init = function() {
   this.meepleImage.src = meepleUrl;
   this.abbotImage = new Image(Game.tileSize/5,Game.tileSize/5);
   this.abbotImage.src = abbotUrl;
+
+  this.needsUpdate = true;
 };
 
 Game.update = function(delta) {
@@ -720,6 +746,10 @@ Game.update = function(delta) {
   }
   if(Keyboard.isDown(Keyboard.DOWN)) {
     diry = 1;
+  }
+
+  if(dirx != 0 || diry != 0) {
+    this.needsUpdate = true;
   }
 
   this.camera.move(delta, dirx, diry);
@@ -745,15 +775,45 @@ Game._drawLayer = function(layer) {
   }
 }
 function enterPlaceMeeple(){
-	Game.placeMeeple = true; 
-	Game.gameboard.setPossibleMeeple(Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x], Game.clickedPosition.x,Game.clickedPosition.y);
-	if(Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x].possibleMeeple.length == 0){
-		//Score Tile and move on.
+	Game.needsUpdate = true;
+
+  if(!Game.placeMeeple){
+    Game.placeMeeple = true; 
+    Game.gameboard.setPossibleMeeple(Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x], Game.clickedPosition.y,Game.clickedPosition.x);	
+    if(Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x].possibleMeeple.length == 0){
+			enterPlaceMeeple();
+		}
 	}
+  else if(Game.placeMeeple){
+		Game.placeMeeple = false;
+		let tile = Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x];
+		tile.possibleMeeple = null;
+		Game.gameboard.addTile(tile,Game.clickedPosition.y, Game.clickedPosition.x);
+
+		Game.nextTile = new Tile();
+    Game.drawTile(Game.nextTile,0,0,Game.tilePreview);
+    Game.gameboard.generateOverlay(Game.nextTile);
+    document.querySelector('#player-'+Game.playerIndex+' .container').classList.add('hide');
+    Game.nextPlayer();
+    document.querySelector('#player-'+Game.playerIndex+' .container').classList.remove('hide');
+    document.getElementById('btm_right_close').classList.add('hide');
+    document.getElementById('btm_right_check').classList.add('hide');
+	}
+	
 }
 function leavePlaceMeeple(){
-	Game.placeMeeple = false;
-	Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x].possibleMeeple = null;
+  if(Game.placeMeeple){
+  	Game.placeMeeple = false;
+    Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x].possibleMeeple = null;
+  	Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x].meeple = null;
+  }
+  else {
+    Game.gameboard.overlay[Game.clickedPosition.y][Game.clickedPosition.x] = null;
+    Game.gameboard.generateOverlay(Game.nextTile);
+    document.getElementById('btm_right_close').classList.add('hide');
+    document.getElementById('btm_right_check').classList.add('hide');
+  }
+  Game.needsUpdate = true;
 }
 Game.drawTile = function(tile, x, y, context, overlay) {
   if(tile == null) { // null => empty tile
@@ -838,13 +898,13 @@ Game.drawTile = function(tile, x, y, context, overlay) {
     }
 
     //draw meeples
-    if(tile.meeple){
-    	drawMeeple(context, tile.meeple.placement, Game.players[Game.playerIndex].meepleImage);
-    }
     if(tile.possibleMeeple && tile.possibleMeeple.length > 0){
 	    for(const place of tile.possibleMeeple){
 	    	drawMeeple(context, place, Game.meepleImage);
 	    }	
+    }
+    if(tile.meeple){
+    	drawMeeple(context, tile.meeple.placement, Game.players[tile.meeple.playerID].meepleImage);
     }
   }
   function drawMeeple(context, placement, meepleImage){
@@ -908,6 +968,7 @@ Game.render = function() {
   this._drawLayer(0);
   // draw map top layer
   //this._drawLayer(1);
+  this.needsUpdate = false;
 };
 
 function rotateFlip(backCon, image,tileX,tileY,rotate, flip){
