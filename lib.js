@@ -70,6 +70,43 @@ class Gameboard {
     }
     this.board = board;
     this.overlay = this.generateOverlay();
+
+    //tiles
+    this.backgroundTypes = ['grass', 'city', 'water', 'mountain'];
+    this.edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
+    this.centerTypes = ['abbey', 'garden'];
+
+    this.backgroundWeighted = weight({
+      grass:16, // Weighted Probability
+      city:2, // Weighted Probability
+      water:1, // Weighted Probability
+      mountain:0 // Weighted Probability
+    });
+    this.edgeWeighted = weight({
+      grass:15, // Weighted Probability
+      city:10, // Weighted Probability
+      road:10, // Weighted Probability
+      mountain:0, // Weighted Probability
+      water:4,
+      river:4
+    });
+    this.centerWeighted = weight({
+      abbey:1, // Weighted Probability
+      garden:1, // Weighted Probability
+      none:8 // Weighted Probability
+    });
+
+    function weight(input) {
+      var array = []; // Just Checking...
+      for(var item in input) {
+        if ( input.hasOwnProperty(item) ) { // Safety
+          for( var i=0; i<input[item]; i++ ) {
+            array.push(item);
+          }
+        }
+      }
+      return array;
+    }
   }
   getEdges(row,column){
     let tileAbove = (row == 0 ? null : this.board[row - 1][column]);
@@ -278,22 +315,89 @@ class Gameboard {
 
 class Tile {
   constructor(top, right, bottom, left, center, background, shield) {
-    let backgroundTypes = ['grass', 'city', 'water', 'mountain'];
-    let edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
-    let centerTypes = ['abbey', 'garden'];
+    console.log(right)
+    let gameboard = Game.gameboard;
 
-    function standardizeTile(tile) {
-      return (edgeTypes.includes(tile) ? tile : edgeTypes[getRandomInt(6)]);
+    function getBackgroundTile(background){
+      return (gameboard.backgroundTypes.includes(background) ? background : gameboard.backgroundWeighted[getRandomInt(gameboard.backgroundWeighted.length)]);
     }
+    function getEdgeTile(edge){
+      return (gameboard.edgeTypes.includes(edge) ? edge : gameboard.edgeWeighted[getRandomInt(gameboard.edgeWeighted.length)]);
+    }
+    function getCenterTile(center){
+      return (gameboard.centerTypes.includes(center) ? center : gameboard.centerWeighted[getRandomInt(gameboard.centerWeighted.length)]);
+    }
+    //first choose background...
+    this.background = getBackgroundTile(background);
 
-    this.top = standardizeTile(top);
-    this.right = standardizeTile(right);
-    this.bottom = standardizeTile(bottom);
-    this.left = standardizeTile(left);
-    this.background = (backgroundTypes.includes(background) ? background : backgroundTypes[getRandomInt(4)]);
+    //then choose edges 
+    if(this.background != 'grass'){
+      this.top = getEdgeTile(top);
+      this.right = getEdgeTile(right);
+      this.bottom = getEdgeTile(bottom);
+      let backgroundEdges = [this.top,this.right,this.bottom].filter(edge => edge == this.background).length;
+      if(backgroundEdges < 1){
+        this.left = this.background;
+      }
+      if(backgroundEdges == 1){
+        let chance = [0,1][getRandomInt(2)];
+
+        if(chance){
+          let replaceTileNum = getRandomInt(3);
+          console.log('chancing it!');
+          switch(replaceTileNum){
+            case 0:
+              this.top = this.background;
+            case 1:
+              this.right = this.background;
+            case 2:
+              this.bottom = this.background;
+          } 
+        }
+      }
+      else {
+        this.left = getEdgeTile(left);
+      }
+    }
+    else { //we're on grass
+      this.top = getEdgeTile(top);
+      let roadEdges = [this.top].filter(edge => edge == 'road').length;
+      let riverEdges = [this.top].filter(edge => edge == 'river').length;
+      this.right = weightedNetworkEdgeTile(right, riverEdges, roadEdges);
+      roadEdges = [this.top,this.right].filter(edge => edge == 'road').length;
+      riverEdges = [this.top,this.right].filter(edge => edge == 'river').length;
+      this.bottom = weightedNetworkEdgeTile(bottom, riverEdges, roadEdges);
+      roadEdges = [this.top,this.right,this.bottom].filter(edge => edge == 'road').length;
+      riverEdges = [this.top,this.right,this.bottom].filter(edge => edge == 'river').length;
+      this.left = weightedNetworkEdgeTile(left, riverEdges, roadEdges);
+
+      function weightedNetworkEdgeTile(type, river_num, road_num){
+        if(type == undefined ){
+          let array = [getEdgeTile(type)];
+          if(river_num == 1){
+            for(var i = 0; i < river_num; i++){
+              array.push('river');
+            }
+          }
+          if(road_num == 1) {
+            for(var i = 0; i < road_num; i++){
+              array.push('road');
+            }  
+          }
+          
+          return array[getRandomInt([array.length])];
+        }
+        else {
+          return getEdgeTile(right);
+        }
+      }
+    }
+    
+    //then choose center
     if(this.background == 'grass'){
-      this.center = (centerTypes.includes(center) ? center : centerTypes[getRandomInt(11)]); //centerTypes[randomInt > centerTypes.length adds more chances for null center]
+      this.center = getCenterTile(center);
     }
+    //then add shield
     if(this.background == 'city'){
       this.shield = ([0].indexOf(getRandomInt(9)) == 0 ? 1 : 0);
     }
@@ -837,13 +941,12 @@ Game.drawTile = function(tile, x, y, context, overlay) {
   }
   else {
     //first draw background
-    let backgroundTypes = ['grass', 'city', 'water', 'mountain'];
-    let background = backgroundTypes.indexOf(tile.background);
+    let background = Game.gameboard.backgroundTypes.indexOf(tile.background);
 
     drawSprite(context,null,background,-tile.rotated*90);
     
     //then draw edge tiles
-    let edgeTypes = ['grass', 'city', 'water', 'mountain','road','river'];
+    let edgeTypes = Game.gameboard.edgeTypes;
 
     let top = edgeTypes.indexOf(tile.top);
     let right = edgeTypes.indexOf(tile.right);
@@ -858,14 +961,17 @@ Game.drawTile = function(tile, x, y, context, overlay) {
     //then draw diagonals and through
     if(background == edgeTypes.indexOf('grass')){
       //draw diagonals - update this for city pieces - not working quite how we want.
-      if(top == right) { drawSprite(context,top,4,0) }
-      if(right == bottom) { drawSprite(context,right,4,90) }
-      if(bottom == left) { drawSprite(context,bottom,4,180) }
-      if(left == top) { drawSprite(context,left,4,270) }
+      let city_count = [top,right,bottom,left].filter(edge => edge == 1).length;
+      console.log(city_count, top);
+
+      if(top == right && (top != 1 || city_count == 2)) { drawSprite(context,top,4,0) }
+      if(right == bottom && (right != 1 || city_count == 2)) { drawSprite(context,right,4,90) }
+      if(bottom == left && (bottom != 1 || city_count == 2)) { drawSprite(context,bottom,4,180) }
+      if(left == top && (left != 1 || city_count == 2)) { drawSprite(context,left,4,270) }
       
       //draw through pieces
-      if(top == bottom && top != left && top != right) { 
-        if(tile.center){
+      if(top == bottom && top != left && top != right && top != 1) { 
+        if(tile.center != 'none'){
           drawSprite(context,top,4,0);
           drawSprite(context,top,4,90);
           drawSprite(context,top,4,180);
@@ -875,8 +981,8 @@ Game.drawTile = function(tile, x, y, context, overlay) {
           drawSprite(context,top,6,(tile.rotated >= 2 ? -180 : 0)) 
         }
       }
-      if(left == right && left != top && left != bottom ) { 
-        if(tile.center){
+      if(left == right && left != top && left != bottom && left != 1) { 
+        if(tile.center != 'none'){
           drawSprite(context,left,4,0);
           drawSprite(context,left,4,90);
           drawSprite(context,left,4,180);
