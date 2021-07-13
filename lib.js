@@ -273,16 +273,16 @@ class Gameboard {
     this.board[row][column] = tile;
 
     //now make sure there is null tile before/after every actual tile.
-    if(row == (this.board.length - 1)) { //add row after
+    if(row == (this.board.length - 2)) { //add row after
       this.addRow();
     }
-    if(column == (this.board[row].length - 1)) { //add column after
+    if(column == (this.board[row].length - 2)) { //add column after
       this.addColumn();
     }
-    if(row == 0) { //add a row before
+    if(row == 1) { //add a row before
       this.addRow(true);
     }
-    if(column == 0) { //add a column before
+    if(column == 1) { //add a column before
       this.addColumn(true);
     }
     this.draw();
