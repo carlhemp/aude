@@ -19,10 +19,12 @@
   <body>
 
     <img id="scrollingBackground" src="Carcassonne_Cite_md.jpg" class="scrollable fs-centered">
-    <div id="escapeMenu" class="fs-centered" style="z-index: 100;" onclick="hideEscapeMenu();">
+    <div id="escapeMenu" class="fs-centered" style="z-index: 100;">
       <div class="dialog">
+        <button class="escape btn_circ" onclick="escape()">X</button>
         <img src="Aude.svg" class="audeImage">
         <button onclick="newGame();">New Game</button>
+        <button onclick="chooseTilemap();">Choose Tilemap</button>
         <button>Save Game</button>
         <button>Load Game</button>
         <button>Exit Game</button>
@@ -31,6 +33,7 @@
     </div>
     <div id="newGame" class="fs-centered hideIn">
       <div class="dialog">
+        <button class="escape btn_circ" onclick="escape()">X</button>
         <h2>New Game Setup</h2>
         <div style="display: flex;">
           <fieldset>
@@ -46,6 +49,14 @@
           </fieldset>
           <button style="height: 2rem; margin-top:auto" onclick="startGame();">Start!</button>
         </div>
+      </div>
+    </div>
+    <div id="chooseTilemap" class="fs-centered hideIn">
+      <div class="dialog">
+        <button class="escape btn_circ" onclick="escape()">X</button>
+        <h2>Choose Tilemap</h2>
+        <input type="file" name="submitfile" id="submitfile" />
+        <input type="button" value="Load" onClick="loadTilemap();" />
       </div>
     </div>
     <header>

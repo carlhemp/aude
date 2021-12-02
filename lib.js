@@ -515,20 +515,29 @@ function touchEnd(e) {
 
 window.addEventListener('keydown', function(event){ 
   if(event.key === "Escape") {
-    let escapeMenuVis = !document.getElementById('escapeMenu').classList.contains('hideUp');
-    let newGameMenuVis = !document.getElementById('newGame').classList.contains('hideIn');
-    if(escapeMenuVis){
-      hideEscapeMenu();
-    }
-    else if(newGameMenuVis){
-      this.document.getElementById('newGame').classList.toggle('hideIn');
-      showEscapeMenu();
-    }
-    else {
-      showEscapeMenu();
-    }
+    escape();
   }
 });
+
+function escape(){
+  let escapeMenuVis = !document.getElementById('escapeMenu').classList.contains('hideUp');
+  let newGameMenuVis = !document.getElementById('newGame').classList.contains('hideIn');
+  let chooseTilemapVis = !document.getElementById('chooseTilemap').classList.contains('hideIn');
+  if(escapeMenuVis){
+    hideEscapeMenu();
+  }
+  else if(newGameMenuVis){
+    this.document.getElementById('newGame').classList.toggle('hideIn');
+    showEscapeMenu();
+  }
+  else if(chooseTilemapVis){
+    this.document.getElementById('chooseTilemap').classList.toggle('hideIn');
+    showEscapeMenu();
+  }
+  else {
+    showEscapeMenu();
+  }
+}
 
 window.addEventListener('click', function(event){
 	Game.needsUpdate = true;
@@ -701,6 +710,35 @@ function addPlayer(){
         <table class="plusIcon"><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>
       </button>
     </div>`);
+}
+
+function chooseTilemap(){
+  hideEscapeMenu();
+  document.getElementById('chooseTilemap').classList.remove('hideIn');
+}
+
+function loadTilemap(){
+  var imgFile = document.getElementById('submitfile');
+  if (imgFile.files && imgFile.files[0]) {
+    var width;
+    var height;
+    var fileSize;
+    var reader = new FileReader();
+    reader.onload = function(event) {
+      var dataUri = event.target.result;
+      Loader.loadImage('tiles', dataUri);
+      setTimeout(function(){
+        Game.tileAtlas = Loader.getImage('tiles');
+        Game.cache = {};
+        Game.needsUpdate = true;
+      },300);
+    };
+    reader.onerror = function(event) {
+      console.error("File could not be read! Code " + event.target.error.code);
+    };
+    reader.readAsDataURL(imgFile.files[0]);
+    escape();
+  }
 }
 
 function toggleRibbon(el) {
