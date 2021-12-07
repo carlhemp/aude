@@ -490,10 +490,8 @@ Loader.getImage = function(key) {
 
 var Touch = {};
 
-//document.addEventListener("touchstart", touchHandler);
 document.addEventListener("touchstart", touchStart);
 document.addEventListener("touchmove", touchMove);
-document.addEventListener("touchend", touchEnd);
 
 function touchStart(e) {
   Touch.startX = e.touches[0].pageX;
@@ -507,10 +505,34 @@ function touchMove(e) {
     Touch.startY = e.touches[0].pageY;
   }
 }
-function touchEnd(e) {
-  if(e.touches) {
-  
+
+//
+// Mouse handler
+//
+
+var Mouse = {};
+
+document.addEventListener("mousedown", mouseDown);
+document.addEventListener("mousemove", mouseMove);
+document.addEventListener("mouseup", mouseUp);
+
+function mouseDown(e) {
+  if(e.target.id=='gameboard'){
+    Mouse.startX = e.pageX;
+    Mouse.startY = e.pageY;
+    Mouse.moving = true;
   }
+}
+function mouseMove(e) {
+  if(Mouse.moving){
+    Game.camera.touchMove(Mouse.startX - e.pageX, Mouse.startY - e.pageY);
+    Game.needsUpdate = true;
+    Mouse.startX = e.pageX;
+    Mouse.startY = e.pageY;
+  }
+}
+function mouseUp(e) {
+  Mouse.moving = false;
 }
 
 window.addEventListener('keydown', function(event){ 
