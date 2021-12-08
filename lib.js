@@ -510,8 +510,8 @@ function touchMove(e) {
     var dist = Math.hypot(
       e.touches[0].pageX - e.touches[1].pageX,
       e.touches[0].pageY - e.touches[1].pageY);
-
     zoom(dist/Touch.dist);
+    Touch.dist = dist;
   }
   else if(e.touches) {
     Game.camera.touchMove(Touch.startX - e.touches[0].pageX, Touch.startY - e.touches[0].pageY);
