@@ -494,11 +494,26 @@ document.addEventListener("touchstart", touchStart);
 document.addEventListener("touchmove", touchMove);
 
 function touchStart(e) {
-  Touch.startX = e.touches[0].pageX;
-  Touch.startY = e.touches[0].pageY;
+  if(e.touches.length === 2){
+    Touch.dist = Math.hypot(
+      e.touches[0].pageX - e.touches[1].pageX,
+      e.touches[0].pageY - e.touches[1].pageY);
+  }
+  else {
+    Touch.startX = e.touches[0].pageX;
+    Touch.startY = e.touches[0].pageY;
+  }
 }
 function touchMove(e) {
-  if(e.touches) {
+  if(e.touches.length === 2){
+    e.preventDefault();
+    var dist = Math.hypot(
+      e.touches[0].pageX - e.touches[1].pageX,
+      e.touches[0].pageY - e.touches[1].pageY);
+
+    zoom(dist/Touch.dist);
+  }
+  else if(e.touches) {
     Game.camera.touchMove(Touch.startX - e.touches[0].pageX, Touch.startY - e.touches[0].pageY);
   	Game.needsUpdate = true;
     Touch.startX = e.touches[0].pageX;
@@ -524,7 +539,8 @@ function mouseDown(e) {
   }
 }
 function mouseMove(e) {
-  if(Mouse.moving){
+  let dist = Math.abs(Mouse.startX - e.pageX)+Math.abs(Mouse.startY - e.pageY);
+  if(Mouse.moving && dist > 5){
     Game.camera.touchMove(Mouse.startX - e.pageX, Mouse.startY - e.pageY);
     Game.needsUpdate = true;
     Mouse.startX = e.pageX;
@@ -538,6 +554,15 @@ function mouseUp(e) {
 window.addEventListener('keydown', function(event){ 
   if(event.key === "Escape") {
     escape();
+  }
+  else if(event.key === "+"){
+    zoom(1.1);
+  }
+  else if(event.key === "-"){
+    zoom(0.9);
+  }
+  else if(event.key === "0"){
+    zoom(0);
   }
 });
 
@@ -561,11 +586,42 @@ function escape(){
   }
 }
 
+window.addEventListener('wheel', wheelZoom);
+
+function wheelZoom(event) {
+  event.preventDefault();
+  let scale = 1;
+  scale += event.deltaY * -0.005;
+  
+  zoom(scale);
+}
+
+function zoom(amount){
+  //calculate new camera position so that we stay centered on the same tile
+  var startCol = Game.camera.x / (Game.tileSize * Game.zoom);
+  let midCol = startCol + Game.camera.width/2 / (Game.tileSize * Game.zoom);
+  var startRow = Game.camera.y / (Game.tileSize * Game.zoom);
+  let midRow = startRow + Game.camera.height/2 / (Game.tileSize * Game.zoom);
+
+  if(amount){
+    Game.zoom *= amount;
+  }
+  else{
+    Game.zoom = 1;
+  }
+ 
+  // Restrict scale
+  Game.zoom = Math.min(Math.max(Game.minZoom, Game.zoom), Game.maxZoom);
+
+  Game.camera.center(midCol, midRow);
+  Game.needsUpdate = true;
+}
+
 window.addEventListener('click', function(event){
 	Game.needsUpdate = true;
   if(Game.camera && event.target.id == 'gameboard'){
-    let tileColumn = Math.floor((Game.camera.x+event.pageX)/Game.tileSize);
-    let tileRow = Math.floor((Game.camera.y+event.pageY)/Game.tileSize);
+    let tileColumn = Math.floor((Game.camera.x+event.pageX)/Game.tileSize/Game.zoom);
+    let tileRow = Math.floor((Game.camera.y+event.pageY)/Game.tileSize/Game.zoom);
 
     if(!Game.placeMeeple && Game.gameboard.overlay[tileRow][tileColumn] != null){
       document.getElementById('btm_right_close').classList.remove('hide');
@@ -583,9 +639,9 @@ window.addEventListener('click', function(event){
     else if(Game.placeMeeple && Game.gameboard.overlay[tileRow][tileColumn] instanceof Tile) { // if we are in meeple placement teritory.
     	//check if we are clicking near a possible meeple
       let tile = Game.gameboard.overlay[tileRow][tileColumn];
-      let insideX = Game.camera.x+event.pageX - Game.tileSize*tileColumn; 
-      let insideY = Game.camera.y+event.pageY - Game.tileSize*tileRow; 
-      let tileSize = Game.tileSize;
+      let insideX = Game.camera.x+event.pageX - Game.tileSize*Game.zoom*tileColumn; 
+      let insideY = Game.camera.y+event.pageY - Game.tileSize*Game.zoom*tileRow; 
+      let tileSize = Game.tileSize*Game.zoom;
       let placement = null;
       
       let sides = [{side: 'left',   distance:insideX},
@@ -826,10 +882,15 @@ class Camera {
   get width() { return window.innerWidth; }
   get height() { return window.innerHeight; }
   get maxX() {
-    return Game.gameboard.board[0].length * Game.tileSize - this.width;
+    return Math.max(Game.gameboard.board[0].length * Game.tileSize * Game.zoom - this.width,0)
   }
   get maxY() {
-    return Game.gameboard.board.length * Game.tileSize - this.height;
+    return Math.max(Game.gameboard.board.length * Game.tileSize * Game.zoom - this.height,0);
+  }
+
+  center(col, row){
+    this.x = col * Game.tileSize * Game.zoom - this.width/2;
+    this.y = row * Game.tileSize * Game.zoom - this.height/2;
   }
 
   move(delta, dirx, diry) {
@@ -860,6 +921,9 @@ Game.init = function() {
   Keyboard.listenForEvents([Keyboard.LEFT, Keyboard.RIGHT, Keyboard.UP, Keyboard.DOWN]);
   this.tileAtlas = Loader.getImage('tiles');
   this.tileSize = 104;
+  this.zoom = 1;
+  this.maxZoom = 2;
+  this.minZoom = 0.25;
   this.gameboard = new Gameboard([[null,null],[null,null]]);
   for(let i=1; i < 2; i++){
     for(let j=1; j < 2; j++){
@@ -867,19 +931,17 @@ Game.init = function() {
     }
   }
   let boardSize = Math.max(window.screen.height, window.screen.width)
-  while(this.gameboard.board.length*Game.tileSize < boardSize) {
+  while(this.gameboard.board.length*Game.tileSize*Game.minZoom < boardSize) {
     this.gameboard.addRow();
     this.gameboard.addRow(true);
-    this.gameboard.generateOverlay();
   }
-  while(this.gameboard.board[0].length*Game.tileSize < boardSize) {
+  while(this.gameboard.board[0].length*Game.tileSize*Game.minZoom < boardSize) {
     this.gameboard.addColumn();
     this.gameboard.addColumn(true);
-    this.gameboard.generateOverlay();
   }
   this.camera = new Camera(true);
   this.nextTile = new Tile();
-  this.drawTile(this.nextTile,0,0,this.tilePreview);
+  this.drawTile(this.nextTile,0,0,this.tilePreview,0,false);
   this.gameboard.generateOverlay(this.nextTile);
 
   let coloredMeepleImage = (new XMLSerializer).serializeToString(document.getElementById('meeple'));
@@ -921,20 +983,20 @@ Game.update = function(delta) {
 };
 
 Game._drawLayer = function(layer) {
-  var startCol = Math.floor(this.camera.x / Game.tileSize);
-  var endCol = Math.min(startCol + (this.camera.width / Game.tileSize) + 1, Game.gameboard.board[0].length -1 );
-  var startRow = Math.floor(this.camera.y / Game.tileSize);
-  var endRow = Math.min(startRow + (this.camera.height / Game.tileSize) + 1,Game.gameboard.board.length - 1);
-  var offsetX = -this.camera.x + startCol * Game.tileSize;
-  var offsetY = -this.camera.y + startRow * Game.tileSize;
+  var startCol = Math.floor(this.camera.x / (Game.tileSize * Game.zoom));
+  var endCol = Math.floor(Math.min(startCol + (this.camera.width / (Game.tileSize * Game.zoom)) + 1, Game.gameboard.board[0].length - 1));
+  var startRow = Math.floor(this.camera.y / (Game.tileSize * Game.zoom));
+  var endRow = Math.floor(Math.min(startRow + (this.camera.height / (Game.tileSize * Game.zoom)) + 1,Game.gameboard.board.length - 1));
+  var offsetX = -this.camera.x + startCol * Game.tileSize * Game.zoom;
+  var offsetY = -this.camera.y + startRow * Game.tileSize * Game.zoom;
 
   for(var c = startCol; c <= endCol; c++) {
     for(var r = startRow; r <= endRow; r++) {
       var tile = this.gameboard.board[r][c];
       var overlay = this.gameboard.overlay[r][c];
       //console.log(tile);
-      var x = (c - startCol) * Game.tileSize + offsetX;
-      var y = (r - startRow) * Game.tileSize + offsetY;
+      var x = (c - startCol) * Game.tileSize * Game.zoom + offsetX;
+      var y = (r - startRow) * Game.tileSize * Game.zoom + offsetY;
       this.drawTile(tile, x, y, this.ctx, overlay);
     }
   }
@@ -956,7 +1018,7 @@ function enterPlaceMeeple(){
 		Game.gameboard.addTile(tile,Game.clickedPosition.y, Game.clickedPosition.x);
 
 		Game.nextTile = new Tile();
-    Game.drawTile(Game.nextTile,0,0,Game.tilePreview);
+    Game.drawTile(Game.nextTile,0,0,Game.tilePreview, 0, false);
     Game.gameboard.generateOverlay(Game.nextTile);
     document.querySelector('#player-'+Game.playerIndex+' .container').classList.add('hide');
     Game.nextPlayer();
@@ -980,13 +1042,13 @@ function leavePlaceMeeple(){
   }
   Game.needsUpdate = true;
 }
-Game.drawTile = function(tile, x, y, context, overlay) {
+Game.drawTile = function(tile, x, y, context, overlay, zoom=true) {
   if(tile == null) { // null => empty tile
     if(!(overlay instanceof Tile)) { //draw background wood pattern
       drawSprite(context,8,1,0)
     }
     else if(overlay instanceof Tile) { //draw highlights and or / partially placed tile if exists.
-      Game.drawTile(overlay,x,y,context);
+      Game.drawTile(overlay,x,y,context, overlay, zoom);
       //drawSprite(context, 8, 2, 2);
       if(!Game.placeMeeple && overlay.match(Game.gameboard.getEdges(Game.clickedPosition.y,Game.clickedPosition.x)).length > 1){
         drawSprite(context, 8, 4, -overlay.rotated*90);
@@ -1077,9 +1139,9 @@ Game.drawTile = function(tile, x, y, context, overlay) {
     }
   }
   function drawMeeple(context, placement, meepleImage){
-  	let tx = Math.round(x);
-  	let ty = Math.round(y);
-  	
+  	let tx = 0;
+  	let ty = 0;
+
   	if(placement == 'top'){
   		tx += Game.tileSize/2 - Game.tileSize/5/2;
   		ty += Game.tileSize/20;    
@@ -1100,15 +1162,23 @@ Game.drawTile = function(tile, x, y, context, overlay) {
   		tx += Game.tileSize/2 - Game.tileSize/5/2;
   		ty += Game.tileSize/2 - Game.tileSize/5/2;
   	}
+    tx = tx*Game.zoom + x;
+    ty = ty*Game.zoom + y;
   	context.drawImage(
   		meepleImage,
   		tx, //target x
   		ty, //target y
-  		Game.tileSize/4, //target width  
-  		Game.tileSize/4  //target height
+  		Game.tileSize*Game.zoom/4, //target width  
+  		Game.tileSize*Game.zoom/4  //target height
 		);
   }
   function drawSprite(context, tile, background, rotation){
+    if(zoom){
+      zoom_amt = Game.zoom;
+    }
+    else {
+      zoom_amt = 1;
+    }
     if(tile != background || background > 3 || tile == null){
       if(tile == null){ tile = background }
       context.drawImage(
@@ -1121,10 +1191,10 @@ Game.drawTile = function(tile, x, y, context, overlay) {
         0,
         Game.tileSize, // source width
         Game.tileSize, // source height
-        Math.round(x), // target x
-        Math.round(y), // target y
-        Game.tileSize, // target width
-        Game.tileSize // target height
+        Math.floor(x), // target x
+        Math.floor(y), // target y
+        Math.ceil(Game.tileSize*zoom_amt), // target width
+        Math.ceil(Game.tileSize*zoom_amt) // target height
       );
     }
   }
