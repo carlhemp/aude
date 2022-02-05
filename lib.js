@@ -80,13 +80,13 @@ class Gameboard {
       grass:16, // Weighted Probability
       city:2, // Weighted Probability
       water:1, // Weighted Probability
-      mountain:0 // Weighted Probability
+      mountain:4 // Weighted Probability
     });
     this.edgeWeighted = weight({
       grass:15, // Weighted Probability
       city:10, // Weighted Probability
       road:10, // Weighted Probability
-      mountain:0, // Weighted Probability
+      mountain:4, // Weighted Probability
       water:4,
       river:4
     });
@@ -354,6 +354,8 @@ class Tile {
               this.bottom = this.background;
           } 
         }
+        //why are we waiting until the end to assign the left tile?  need to revisit.
+        this.left = getEdgeTile(left);
       }
       else {
         this.left = getEdgeTile(left);
